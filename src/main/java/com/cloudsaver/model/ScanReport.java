@@ -19,7 +19,7 @@ import java.util.List;
 @AllArgsConstructor                                                 // Lombok - Construtor com todos os argumentos  
 @Builder                                                           // Lombok - Gera um construtor com todos os campos 
 
-
+// Transforma tabelas do banco em objetos manipulaveis pelo Spring Boot 
 public class ScanReport { 
 
 

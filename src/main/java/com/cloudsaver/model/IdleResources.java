@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 
+// Transforma tabelas do banco em objetos manipulaveis pelo Spring Boot 
 public class IdleResource {
 
     @Id                                                                  // Chave primária 
