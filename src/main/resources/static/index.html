@@ -24,10 +24,22 @@
 
         <details class="button">
             <summary>Como utilizar ? </summary>
-            <p> Para análise do CloudSaver, optamos por uma abordagem mais segura possível! Você não precisa fornecer nenhum acesso, senha ou nada sobre seu ambiente de infraestrutura, toda análise é feito através de um <strong>arquivo JSON gerado pela AWS CLI</strong> </p>
+            <p> Para análise do CloudSaver, optamos por uma abordagem mais <strong>segura possível</strong>! Você não precisa fornecer nenhum acesso, senha ou nada sobre seu ambiente de infraestrutura, toda análise é feito através de um <strong>arquivo JSON gerado pela AWS CLI</strong> </p>
+
+            <p> <strong> Como gerar o arquivo JSON para análise? </strong> 
+            
+                <p> No <strong>Aws CLI </strong>, execute o seguinte comando 
+           
+                <div class="comando">
+                    <button type="button" class="copy-bottom" onclick="copyCode(this)" aria-label="Copiar comando" title="Copiar comando">⧉</button>
+                    <p><code>aws ec2 describe-instances --query "Reservations[*].Instances[*].{InstanceId:InstanceId, InstanceType:InstanceType, State:State.Name, LaunchTime:LaunchTime, Tags:Tags}" &gt; ec2_resources.json</code></p>
+
+            </div>
+
         </details>
 
 
     </main>
+    <script src="app.js"></script>
 </body>
 </html>

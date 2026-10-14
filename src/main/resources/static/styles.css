@@ -14,7 +14,7 @@ body {
     min-height: 100vh;
     margin: 0;
     color: var(--text);
-    background: var(--background);
+    background: linear-gradient(180deg, #f8faff 0%, var(--background) 45%);
     font-family: Arial, sans-serif;
 }
 
@@ -123,6 +123,7 @@ body {
     padding: 22px max(24px, calc((100% - 1000px) / 2));
     background: #fff;
     border-bottom: 1px solid #e5ebf3;
+    box-shadow: 0 2px 12px rgba(7, 27, 92, .04);
 }
 
 .brand {
@@ -149,7 +150,7 @@ body {
 
 .dashboard {
     width: min(100% - 48px, 920px);
-    margin: 70px auto;
+    margin: 62px auto;
 }
 
 .eyebrow {
@@ -164,7 +165,8 @@ body {
 .dashboard h1 {
     margin: 0 0 10px;
     color: var(--blue);
-    font-size: 38px;
+    font-size: 36px;
+    letter-spacing: -.02em;
 }
 
 .intro {
@@ -179,17 +181,32 @@ body {
     color: #fff;
     background: var(--blue);
     box-shadow: 0 8px 20px rgba(7, 27, 92, .12);
+    transition: box-shadow .2s, transform .2s;
+}
+
+.button + .button {
+    margin-top: 14px;
+}
+
+.button:hover {
+    box-shadow: 0 10px 24px rgba(7, 27, 92, .17);
+    transform: translateY(-1px);
 }
 
 .button summary {
     cursor: pointer;
     font-weight: bold;
+    outline: none;
 }
 
 .button p {
     margin: 18px 0 0;
     color: #dce7ff;
     line-height: 1.6;
+}
+
+.button summary::marker {
+    color: var(--accent);
 }
 
 @media (max-width: 560px) {
@@ -212,4 +229,42 @@ body {
     .dashboard h1 {
         font-size: 30px;
     }
+}
+
+.comando{ 
+    margin: 18px; 
+    background-color: #172554;
+    border-radius: 5px; 
+    width: 90%;
+    padding: 38px 10px 10px;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.copy-bottom{ 
+    cursor: pointer; 
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgb(190, 189, 189);
+    color: #fff; 
+    border: none; 
+    padding: 4px 8px; 
+    border-radius: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: background-color 0.3s ease; 
+}
+
+.comando p {
+    margin: 0;
+    min-width: 0;
+}
+
+.comando code {
+    overflow-wrap: anywhere;
+}
+
+.copy-bottom:hover { 
+    background-color: rgb(128, 128, 128); 
 }
