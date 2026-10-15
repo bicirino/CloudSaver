@@ -120,7 +120,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 22px max(24px, calc((100% - 1000px) / 2));
+    padding: 22px 24px;
     background: #fff;
     border-bottom: 1px solid #e5ebf3;
     box-shadow: 0 2px 12px rgba(7, 27, 92, .04);
@@ -149,8 +149,8 @@ body {
 }
 
 .dashboard {
-    width: min(100% - 48px, 920px);
-    margin: 62px auto;
+    width: min(100% - 48px, 1200px);
+    margin: 62px 0 62px max(24px, calc((100% - 1200px) / 2));
 }
 
 .eyebrow {
@@ -174,7 +174,7 @@ body {
 }
 
 .button {
-    width: min(100%, 650px);
+    width: min(100%, 850px);
     padding: 18px 22px;
     border: 1px solid #e0e7f0;
     border-radius: 12px;
