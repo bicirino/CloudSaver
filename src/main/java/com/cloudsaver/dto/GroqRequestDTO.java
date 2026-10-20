@@ -1,10 +1,8 @@
 package com.cloudsaver.dto; 
 
 // Bibliotecas Lombok para criação de getters, setters, construtores, etc. 
-import lombok.AllArgsConstructor; 
 import lombok.Builder; 
 import lombok.Data; 
-import lombok.NoArgsConstructor; 
 
 import java.util.List; 
 
@@ -18,8 +16,6 @@ Mapeia (associa) o formato JSON esperado pela API do GROQ com as propriedades da
 
 @Data 
 @Builder 
-@AllArgsConstructor 
-@NoArgsConstructor 
 public class GroqRequestDTO { 
 
     // Armazena nome do modelo da IA 
@@ -28,11 +24,17 @@ public class GroqRequestDTO {
     // Armazena a lista de mensagens (conversa) enviada para a IA
     private List<Message> messages; 
 
+    public GroqRequestDTO() {
+    }
+
+    public GroqRequestDTO(String model, List<Message> messages) {
+        this.model = model;
+        this.messages = messages;
+    }
+
 
     @Data
     @Builder 
-    @AllArgsConstructor 
-    @NoArgsConstructor 
     public static class Message { 
 
         // Papel do emissor da mensagem 
@@ -40,5 +42,13 @@ public class GroqRequestDTO {
 
         // Conteúdo do prompt enviado ao modelo 
         private String content; 
+
+        public Message() {
+        }
+
+        public Message(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
     }
 }
