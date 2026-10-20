@@ -16,7 +16,7 @@ Mapeia (associa) o formato JSON esperado pela API do GROQ com as propriedades da
 
 @Data 
 @Builder 
-public class GroqRequestDTO { 
+public class GroqRequestDto { 
 
     // Armazena nome do modelo da IA 
     private String model; 

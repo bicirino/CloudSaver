@@ -20,7 +20,7 @@ Reúne o resumo da varredura e a lista detalhada de recursos ociosos mapeados
 @Builder 
 @AllArgsConstructor 
 @NoArgsConstructor 
-public class ScanReportDTO { 
+public class ScanReportDto { 
 
     // Primary Key (ID) do relatório de varredura  
     private Long id; 
@@ -47,7 +47,7 @@ public class ScanReportDTO {
     @Builder 
     @AllArgsConstructor 
     @NoArgsConstructor 
-    public static class IdleResourceDTO{ 
+    public static class IdleResourceDto{ 
 
         // Id do recurso ocioso encontrado 
         private Long id; 

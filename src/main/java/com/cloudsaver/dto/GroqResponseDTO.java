@@ -15,7 +15,7 @@ DTO para deserializar (converter) a resposta JSON devolvida pela API da GROQ
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class GroqResponseDTO { 
+public class GroqResponseDto { 
 
     // Armazena a lista de escolhas (respostas) geradas pela IA 
     private List<Choice> choices; 
