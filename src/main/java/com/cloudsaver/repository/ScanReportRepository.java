@@ -8,6 +8,12 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;  
 
 
+/* 
+    Esse arquivo será responsável por gerenciar a tabela "scan_reports" no banco de dados 
+
+*/
+
+
 // "Repository" serve para indicar que a classe é um repositório de dados (que é um tipo de classe responsável pelo CRUD de um banco de dados) 
 @Repository 
 public interface ScanReportRepository extends JpaRepository<ScanReport, Long>{ 

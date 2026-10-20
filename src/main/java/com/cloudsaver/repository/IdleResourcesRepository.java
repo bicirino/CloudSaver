@@ -6,6 +6,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;  
 
+/* 
+    Esse arquivo será responsável por gerenciar a tabela "idle_resources" no banco de dados 
+
+*/
+
+
 @Repository 
 public interface IdleResourcesRepository extends JpaRepository<IdleResource, Long>{ 
 
