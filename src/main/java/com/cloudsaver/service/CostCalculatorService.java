@@ -44,6 +44,7 @@ public class CostCalculatorService {
             DEFAULT_HOURLY_RATE 
         }; 
 
+        // Preço/hora * 730 horas = custo mensal 
         return hourlyRate.multiply(HOURS_IN_MONTH).setScale(2, RoundingMode.HALF_UP);
     } 
 
