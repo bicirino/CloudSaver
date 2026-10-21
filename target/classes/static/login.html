@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | CloudSaver</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+    <form id="login-form" onsubmit="realizarLogin(event)">
+        <div class="title">
+            <span class="logo-mark" aria-hidden="true">︎⚡︎</span>
+            <h1>CloudSaver</h1>
+            <p>Gerencie seus recursos AWS com mais clareza.</p>
+        </div>
+
+        <div class="input-group">
+            <label for="user-name">Seu nome <span class="obrigatorio">*</span></label>
+            <input type="text" id="user-name" placeholder="Digite seu nome" required>
+
+            <label for="password">Senha <span class="obrigatorio">*</span></label>
+            <input type="password" id="password" placeholder="Digite sua senha" required>
+
+        </div>
+
+        <button type="submit" class="enviar">Entrar</button>
+    </form>
+    <script src="app.js"></script>
+</body>
+</html>
