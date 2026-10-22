@@ -39,6 +39,51 @@
         </details>
 
 
+
+        <section class="analise" aria-labelledby="titulo-analise">
+            <h2 id="titulo-analise">Análise arquivo JSON</h2>
+            <p> Selecione o <code>ec2_resources.json</code> gerado pelo AWS CLI</p> 
+            
+            <form id="form-analise"> 
+                <label for="arquivo-json">Arquivo JSON</label>
+                <input type="file" id="arquivo-json" name="file" accept=".json,application/json" required />
+                
+                <button type="submit" id="btn-analisar"> Analisar </button>
+            </form> 
+
+            <p id="analise-erro" class="analise-erro" hidden role="alert"></p> 
+            <p id="analise-carregando" hidden>Analisando...</p>
+            
+            <div id="resultado-analise" hidden> 
+                <h3> Resultado da análise </h3>
+
+                <p><strong> Instâncias ociosas:</strong> <span id="res-total-paradas">-</span></p>
+                <p><strong> Custo mensal estimado:</strong> <span id="res-custo-mensal"></span></p>
+                
+                <h4> Recomendação (IA) </h4>
+                <p id="res-recomendacao"></p>
+
+                <h4> Instâncias</h4>
+                <table> 
+                    <thead> 
+                        <tr> 
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Custo mensal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="res-tabela-instancias"></tbody>
+                </table> 
+            </div> 
+        </section> 
+
+                <details class="button">
+                    <summary>Saiba mais sobre o CloudSaver</summary>
+                    <p>O CloudSaver identifica <strong>recursos ociosos na AWS</strong>, calcula o <strong>desperdício financeiro</strong> e gera <strong>diagnósticos estratégicos</strong> via LLM.</p>
+                </details>
+            </div>
+
+
     </main>
     <script src="app.js"></script>
 </body>
