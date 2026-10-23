@@ -1276,7 +1276,8 @@ code {
     font-size: 13px;
 }
 
-.side-nav-link span {
+.side-nav-link span,
+.side-nav-link i {
     width: 20px;
     color: #667085;
     font-size: 14px;
@@ -1294,7 +1295,8 @@ code {
     font-weight: 600;
 }
 
-.side-nav-link.is-active span {
+.side-nav-link.is-active span,
+.side-nav-link.is-active i {
     color: #c45500;
 }
 

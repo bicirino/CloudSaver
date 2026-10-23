@@ -152,9 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const links = [...document.querySelectorAll('.side-nav-link')];
     const atualizarMenu = () => {
-        const destino = window.location.hash || '#visao-geral';
+        const paginaAtual = window.location.pathname.split('/').pop() || 'index.html';
         links.forEach((link) => {
-            link.classList.toggle('is-active', link.getAttribute('href') === destino);
+            const destino = link.getAttribute('href')?.split('#')[0];
+            link.classList.toggle('is-active', destino === paginaAtual);
         });
     };
 
