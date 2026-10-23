@@ -1,8 +1,0 @@
-com\cloudsaver\service\AnaliseService.class
-com\cloudsaver\dto\ResultadoAnalise$ResultadoAnaliseBuilder.class
-com\cloudsaver\dto\ResultadoAnalise.class
-com\cloudsaver\controller\AnaliseController.class
-com\cloudsaver\dto\ResultadoAnalise$InstanciaResumo.class
-com\cloudsaver\dto\InstanciaEc2.class
-com\cloudsaver\CloudSaverApplication.class
-com\cloudsaver\dto\ResultadoAnalise$InstanciaResumo$InstanciaResumoBuilder.class
