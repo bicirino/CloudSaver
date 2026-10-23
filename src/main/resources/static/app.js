@@ -74,7 +74,7 @@ function renderizarResultado(dados) {
     const lista = dados.instancias ?? [];
     if (lista.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3">Nenhuma instância parada encontrada.</td>';
+        tr.innerHTML = '<td colspan="3" class="table-empty">Nenhuma instância parada encontrada.</td>';
         tbody.appendChild(tr);
     } else {
         for (const item of lista) {
@@ -140,4 +140,13 @@ async function enviarAnalise(event) {
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('form-analise');
     form?.addEventListener('submit', enviarAnalise);
+
+    const input = document.getElementById('arquivo-json');
+    const nomeArquivo = document.getElementById('nome-arquivo');
+    input?.addEventListener('change', () => {
+        const file = input.files?.[0];
+        if (nomeArquivo) {
+            nomeArquivo.textContent = file ? file.name : 'Nenhum arquivo selecionado';
+        }
+    });
 });

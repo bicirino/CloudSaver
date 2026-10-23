@@ -1,90 +1,236 @@
 <!DOCTYPE html>
+
 <html lang="pt-br">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>CloudSaver</title>
+
     <link rel="stylesheet" href="styles.css">
+
 </head>
 
+
+
 <body>
+
     <header class="topbar">
-        <a class="brand" href="index.html"><span class="logo-mark" aria-hidden="true">︎⚡︎</span>CloudSaver</a>
+
+        <a class="brand" href="index.html">
+
+            <span class="logo-mark" aria-hidden="true">︎⚡︎</span>
+
+            CloudSaver
+
+        </a>
+
+        <span class="connection-status">Análise local · sem credenciais AWS</span>
+
     </header>
 
+
+
     <main class="dashboard">
-        <p class="eyebrow">Visão geral</p>
-        <h1>Bem-vindo ao CloudSaver</h1>
-        <p class="intro">Acompanhe a saúde e a eficiência dos seus recursos na AWS.</p>
 
-        <details class="button">
-            <summary>Saiba mais sobre o CloudSaver</summary>
-            <p>O CloudSaver identifica <strong>recursos ociosos na AWS</strong>, calcula o <strong>desperdício financeiro</strong> e gera <strong>diagnósticos estratégicos</strong> via LLM.</p>
-        </details>
+        <header class="page-header">
 
-        <details class="button">
-            <summary>Como utilizar ? </summary>
-            <p> Para análise do CloudSaver, optamos por uma abordagem mais <strong>segura possível</strong>! Você não precisa fornecer nenhum acesso, senha ou nada sobre seu ambiente de infraestrutura, toda análise é feito através de um <strong>arquivo JSON gerado pela AWS CLI</strong> </p>
+            <p class="eyebrow">Visão geral</p>
 
-            <p> <strong> Como gerar o arquivo JSON para análise? </strong> 
-            
-                <p> No <strong>Aws CLI </strong>, execute o seguinte comando 
-           
-                <div class="comando">
-                    <button type="button" class="copy-bottom" onclick="copyCode(this)" aria-label="Copiar comando" title="Copiar comando">⧉</button>
-                    <p><code>aws ec2 describe-instances --query "Reservations[*].Instances[*].{InstanceId:InstanceId, InstanceType:InstanceType, State:State.Name, LaunchTime:LaunchTime, Tags:Tags}" &gt; ec2_resources.json</code></p>
+            <h1>Bem-vindo ao CloudSaver</h1>
 
-            </div>
+            <p class="intro">Envie o JSON das suas instâncias EC2 e veja custos estimados e recomendações em um só lugar.</p>
 
-        </details>
+        </header>
 
 
 
-        <section class="analise" aria-labelledby="titulo-analise">
-            <h2 id="titulo-analise">Análise arquivo JSON</h2>
-            <p> Selecione o <code>ec2_resources.json</code> gerado pelo AWS CLI</p> 
-            
-            <form id="form-analise"> 
-                <label for="arquivo-json">Arquivo JSON</label>
-                <input type="file" id="arquivo-json" name="file" accept=".json,application/json" required />
-                
-                <button type="submit" id="btn-analisar"> Analisar </button>
-            </form> 
+        <div class="layout">
 
-            <p id="analise-erro" class="analise-erro" hidden role="alert"></p> 
-            <p id="analise-carregando" hidden>Analisando...</p>
-            
-            <div id="resultado-analise" hidden> 
-                <h3> Resultado da análise </h3>
+            <section class="card card--primary analise" aria-labelledby="titulo-analise">
 
-                <p><strong> Instâncias ociosas:</strong> <span id="res-total-paradas">-</span></p>
-                <p><strong> Custo mensal estimado:</strong> <span id="res-custo-mensal"></span></p>
-                
-                <h4> Recomendação (IA) </h4>
-                <p id="res-recomendacao"></p>
+                <h2 id="titulo-analise" class="card-title">Analisar arquivo JSON</h2>
 
-                <h4> Instâncias</h4>
-                <table> 
-                    <thead> 
-                        <tr> 
-                            <th>ID</th>
-                            <th>Tipo</th>
-                            <th>Custo mensal</th>
-                        </tr>
-                    </thead>
-                    <tbody id="res-tabela-instancias"></tbody>
-                </table> 
-            </div> 
-        </section> 
+                <p class="card-desc">Selecione o <code>ec2_resources.json</code> gerado pelo AWS CLI.</p>
 
-                <details class="button">
-                    <summary>Saiba mais sobre o CloudSaver</summary>
-                    <p>O CloudSaver identifica <strong>recursos ociosos na AWS</strong>, calcula o <strong>desperdício financeiro</strong> e gera <strong>diagnósticos estratégicos</strong> via LLM.</p>
+
+
+                <form id="form-analise" class="upload-form">
+
+                    <div class="file-field">
+
+                        <label for="arquivo-json">Arquivo JSON</label>
+
+                        <input
+
+                            type="file"
+
+                            id="arquivo-json"
+
+                            name="file"
+
+                            accept=".json,application/json"
+
+                            required
+
+                        />
+
+                        <p id="nome-arquivo" class="file-name" aria-live="polite">Nenhum arquivo selecionado</p>
+
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-analisar">Analisar</button>
+
+                </form>
+
+
+
+                <p id="analise-erro" class="analise-erro" hidden role="alert"></p>
+
+                <p id="analise-carregando" class="analise-loading" hidden>
+
+                    <span class="spinner" aria-hidden="true"></span>
+
+                    Analisando…
+
+                </p>
+
+
+
+                <div id="resultado-analise" class="resultado" hidden>
+
+                    <h3 class="resultado-title">Resultado da análise</h3>
+
+
+
+                    <div class="metrics">
+
+                        <article class="metric">
+
+                            <p class="metric-label">Instâncias paradas</p>
+
+                            <p class="metric-value" id="res-total-paradas">—</p>
+
+                        </article>
+
+                        <article class="metric">
+
+                            <p class="metric-label">Custo mensal estimado</p>
+
+                            <p class="metric-value metric-value--accent" id="res-custo-mensal">—</p>
+
+                        </article>
+
+                    </div>
+
+
+
+                    <div class="recomendacao">
+
+                        <h4>Recomendação (IA)</h4>
+
+                        <p id="res-recomendacao"></p>
+
+                    </div>
+
+
+
+                    <div class="table-wrap">
+
+                        <h4>Instâncias</h4>
+
+                        <table class="data-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>ID</th>
+
+                                    <th>Tipo</th>
+
+                                    <th>Custo mensal</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="res-tabela-instancias"></tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <aside class="sidebar" aria-label="Ajuda e documentação">
+
+                <details class="card card--info">
+
+                    <summary>Como utilizar</summary>
+
+                    <div class="card-body">
+
+                        <p>
+
+                            A análise é feita só com um <strong>arquivo JSON</strong> exportado por você.
+
+                            Não é necessário informar chaves AWS nem senhas nesta interface.
+
+                        </p>
+
+                        <p><strong>Gerar o JSON no AWS CLI</strong></p>
+
+                        <div class="comando">
+
+                            <button type="button" class="copy-bottom" onclick="copyCode(this)" aria-label="Copiar comando" title="Copiar comando">⧉</button>
+
+                            <code>aws ec2 describe-instances --query "Reservations[*].Instances[*].{InstanceId:InstanceId, InstanceType:InstanceType, State:State.Name, LaunchTime:LaunchTime, Tags:Tags}" &gt; ec2_resources.json</code>
+
+                        </div>
+
+                    </div>
+
                 </details>
-            </div>
 
+
+
+                <details class="card card--info">
+
+                    <summary>Saiba mais sobre o CloudSaver</summary>
+
+                    <div class="card-body">
+
+                        <p>
+
+                            O CloudSaver identifica <strong>recursos ociosos na AWS</strong>,
+
+                            calcula o <strong>desperdício financeiro</strong> e gera
+
+                            <strong>diagnósticos</strong> via LLM quando a chave Groq está configurada no servidor.
+
+                        </p>
+
+                    </div>
+
+                </details>
+
+            </aside>
+
+        </div>
 
     </main>
+
     <script src="app.js"></script>
+
 </body>
+
 </html>
+
