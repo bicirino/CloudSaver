@@ -1512,6 +1512,47 @@ code {
     background: #475467;
 }
 
+.copy-notification {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-width: 240px;
+    padding: 14px 16px;
+    border: 1px solid #aab7c4;
+    border-left: 4px solid #1d8102;
+    border-radius: 2px;
+    color: #161e2d;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateX(12px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.copy-notification.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.copy-notification i {
+    color: #1d8102;
+    font-size: 16px;
+}
+
+.copy-notification.is-error {
+    border-left-color: #d13212;
+}
+
+.copy-notification.is-error i {
+    color: #d13212;
+}
+
 @media (max-width: 860px) {
     .app-shell {
         grid-template-columns: 1fr;

@@ -21,25 +21,40 @@ async function copyCode(button) {
         return;
     }
 
-    // Armazena o texto original do botão para restaurá-lo posteriormente 
-    const originalText = button.innerText;
-
-    // Tenta copiar o texto do elemento <code> para a área de transferência 
+    // Tenta copiar o texto do elemento <code> para a área de transferência
     try {
         await navigator.clipboard.writeText(codeElement.innerText);
-        button.innerText = '✓';
         button.setAttribute('aria-label', 'Comando copiado');
+        button.setAttribute('title', 'Comando copiado');
+        mostrarNotificacaoCopia('Comando copiado', true);
     } catch (error) {
         console.error('Erro ao copiar:', error);
-        button.innerText = '!';
         button.setAttribute('aria-label', 'Erro ao copiar comando');
+        button.setAttribute('title', 'Erro ao copiar comando');
+        mostrarNotificacaoCopia('Não foi possível copiar o comando', false);
+    }
+}
+
+function mostrarNotificacaoCopia(mensagem, sucesso) {
+    const notificacao = document.getElementById('copy-notification');
+    if (!notificacao) {
+        return;
     }
 
-    // Define um temprizador para restaurar o texto original do botão após 2 segundos 
-    setTimeout(() => {
-        button.innerText = originalText;
-        button.setAttribute('aria-label', 'Copiar comando');
-    }, 2000);
+    const textoNotificacao = notificacao.querySelector('span');
+    if (textoNotificacao) {
+        textoNotificacao.textContent = mensagem;
+    }
+    notificacao.classList.toggle('is-error', !sucesso);
+    notificacao.hidden = false;
+    notificacao.classList.remove('is-visible');
+    requestAnimationFrame(() => notificacao.classList.add('is-visible'));
+
+    clearTimeout(mostrarNotificacaoCopia.timeoutId);
+    mostrarNotificacaoCopia.timeoutId = setTimeout(() => {
+        notificacao.classList.remove('is-visible');
+        notificacao.hidden = true;
+    }, 2200);
 }
 
 // Função para formatar o valor em USD 
