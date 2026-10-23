@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudSaver | Analisar estrutura</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="app-page">
+    <header class="topbar"><a class="brand" href="index.html"><span class="logo-mark" aria-hidden="true">CS</span>CloudSaver</a><span class="connection-status"><span aria-hidden="true">●</span> Análise segura</span></header>
+    <div class="app-shell">
+        <aside class="app-sidebar" aria-label="Menu principal">
+            <p class="sidebar-label">Navegação</p>
+            <nav class="side-nav">
+                <a class="side-nav-link" href="index.html"><span aria-hidden="true">⌂</span> Visão geral</a>
+                <a class="side-nav-link" href="gerar-json.html"><span aria-hidden="true">{ }</span> Como gerar JSON</a>
+                <a class="side-nav-link is-active" href="analise.html"><span aria-hidden="true">↗</span> Analisar estrutura</a>
+            </nav>
+            <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Dados processados localmente</span></div>
+        </aside>
+        <main class="dashboard">
+            <header class="page-header"><p class="breadcrumb">CloudSaver <span aria-hidden="true">/</span> Analisar estrutura</p><p class="eyebrow">Passo 2</p><h1>Analisar estrutura</h1><p class="intro">Selecione o arquivo <code>recursos.json</code> que você gerou e veja os custos estimados e as recomendações.</p></header>
+            <section class="content-section card analise" aria-labelledby="titulo-analise">
+                <div class="section-heading"><div><p class="section-kicker">Enviar arquivo</p><h2 id="titulo-analise" class="card-title">Comece sua análise</h2></div><span class="step-badge">Passo 2 de 2</span></div>
+                <form id="form-analise" class="upload-form"><div class="file-field"><label for="arquivo-json">Arquivo JSON</label><input type="file" id="arquivo-json" name="file" accept=".json,application/json" required><p id="nome-arquivo" class="file-name" aria-live="polite">Nenhum arquivo selecionado</p></div><button type="submit" class="btn btn-primary" id="btn-analisar">Executar análise</button></form>
+                <p id="analise-erro" class="analise-erro" hidden role="alert"></p><p id="analise-carregando" class="analise-loading" hidden><span class="spinner" aria-hidden="true"></span> Analisando…</p>
+                <div id="resultado-analise" class="resultado" hidden><h3 class="resultado-title">Resultado da análise</h3><div class="metrics"><article class="metric"><p class="metric-label">Recursos parados</p><p class="metric-value" id="res-total-paradas">—</p></article><article class="metric"><p class="metric-label">Custo mensal estimado</p><p class="metric-value metric-value--accent" id="res-custo-mensal">—</p></article></div><div class="recomendacao"><h4>Recomendação (IA)</h4><p id="res-recomendacao"></p></div><div class="table-wrap"><h4>Recursos encontrados</h4><table class="data-table"><thead><tr><th>Recurso</th><th>Tipo</th><th>Custo mensal</th></tr></thead><tbody id="res-tabela-instancias"></tbody></table></div></div>
+            </section>
+            <div class="page-actions"><a class="text-link" href="gerar-json.html">← Voltar para Como gerar JSON</a></div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

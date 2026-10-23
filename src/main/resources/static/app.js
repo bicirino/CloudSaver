@@ -149,4 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
             nomeArquivo.textContent = file ? file.name : 'Nenhum arquivo selecionado';
         }
     });
+
+    const links = [...document.querySelectorAll('.side-nav-link')];
+    const atualizarMenu = () => {
+        const destino = window.location.hash || '#visao-geral';
+        links.forEach((link) => {
+            link.classList.toggle('is-active', link.getAttribute('href') === destino);
+        });
+    };
+
+    window.addEventListener('hashchange', atualizarMenu);
+    atualizarMenu();
 });

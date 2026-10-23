@@ -1,236 +1,53 @@
 <!DOCTYPE html>
-
 <html lang="pt-br">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>CloudSaver</title>
-
+    <title>CloudSaver | Visão geral</title>
     <link rel="stylesheet" href="styles.css">
-
 </head>
-
-
-
-<body>
-
+<body class="app-page">
     <header class="topbar">
-
-        <a class="brand" href="index.html">
-
-            <span class="logo-mark" aria-hidden="true">︎⚡︎</span>
-
-            CloudSaver
-
-        </a>
-
-        <span class="connection-status">Análise local · sem credenciais AWS</span>
-
+        <a class="brand" href="index.html"><span class="logo-mark" aria-hidden="true">CS</span>CloudSaver</a>
+        <span class="connection-status"><span aria-hidden="true">●</span> Análise segura</span>
     </header>
-
-
-
-    <main class="dashboard">
-
-        <header class="page-header">
-
-            <p class="eyebrow">Visão geral</p>
-
-            <h1>Bem-vindo ao CloudSaver</h1>
-
-            <p class="intro">Envie o JSON das suas instâncias EC2 e veja custos estimados e recomendações em um só lugar.</p>
-
-        </header>
-
-
-
-        <div class="layout">
-
-            <section class="card card--primary analise" aria-labelledby="titulo-analise">
-
-                <h2 id="titulo-analise" class="card-title">Analisar arquivo JSON</h2>
-
-                <p class="card-desc">Selecione o <code>ec2_resources.json</code> gerado pelo AWS CLI.</p>
-
-
-
-                <form id="form-analise" class="upload-form">
-
-                    <div class="file-field">
-
-                        <label for="arquivo-json">Arquivo JSON</label>
-
-                        <input
-
-                            type="file"
-
-                            id="arquivo-json"
-
-                            name="file"
-
-                            accept=".json,application/json"
-
-                            required
-
-                        />
-
-                        <p id="nome-arquivo" class="file-name" aria-live="polite">Nenhum arquivo selecionado</p>
-
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" id="btn-analisar">Analisar</button>
-
-                </form>
-
-
-
-                <p id="analise-erro" class="analise-erro" hidden role="alert"></p>
-
-                <p id="analise-carregando" class="analise-loading" hidden>
-
-                    <span class="spinner" aria-hidden="true"></span>
-
-                    Analisando…
-
-                </p>
-
-
-
-                <div id="resultado-analise" class="resultado" hidden>
-
-                    <h3 class="resultado-title">Resultado da análise</h3>
-
-
-
-                    <div class="metrics">
-
-                        <article class="metric">
-
-                            <p class="metric-label">Instâncias paradas</p>
-
-                            <p class="metric-value" id="res-total-paradas">—</p>
-
-                        </article>
-
-                        <article class="metric">
-
-                            <p class="metric-label">Custo mensal estimado</p>
-
-                            <p class="metric-value metric-value--accent" id="res-custo-mensal">—</p>
-
-                        </article>
-
-                    </div>
-
-
-
-                    <div class="recomendacao">
-
-                        <h4>Recomendação (IA)</h4>
-
-                        <p id="res-recomendacao"></p>
-
-                    </div>
-
-
-
-                    <div class="table-wrap">
-
-                        <h4>Instâncias</h4>
-
-                        <table class="data-table">
-
-                            <thead>
-
-                                <tr>
-
-                                    <th>ID</th>
-
-                                    <th>Tipo</th>
-
-                                    <th>Custo mensal</th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody id="res-tabela-instancias"></tbody>
-
-                        </table>
-
-                    </div>
-
+    <div class="app-shell">
+        <aside class="app-sidebar" aria-label="Menu principal">
+            <p class="sidebar-label">Navegação</p>
+            <nav class="side-nav">
+                <a class="side-nav-link is-active" href="index.html"><span aria-hidden="true">⌂</span> Visão geral</a>
+                <a class="side-nav-link" href="gerar-json.html"><span aria-hidden="true">{ }</span> Como gerar JSON</a>
+                <a class="side-nav-link" href="analise.html"><span aria-hidden="true">↗</span> Analisar estrutura</a>
+            </nav>
+            <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Dados processados localmente</span></div>
+        </aside>
+        <main class="dashboard">
+            <header class="page-header">
+                <p class="breadcrumb">CloudSaver <span aria-hidden="true">/</span> Visão geral</p>
+                <p class="eyebrow">Bem-vindo</p>
+                <h1>Entenda seus recursos e reduza desperdícios</h1>
+                <p class="intro">O CloudSaver transforma um relatório da sua conta AWS em uma visão simples dos recursos parados, custos estimados e ações recomendadas.</p>
+            </header>
+            <section class="welcome-panel" aria-labelledby="titulo-beneficios">
+                <div>
+                    <p class="section-kicker">Sua jornada começa aqui</p>
+                    <h2 id="titulo-beneficios">Do arquivo JSON à decisão</h2>
+                    <p>Gere o relatório, envie o arquivo e receba os principais pontos para decidir onde economizar.</p>
                 </div>
-
+                <a class="btn btn-primary" href="gerar-json.html">Começar agora</a>
             </section>
-
-
-
-            <aside class="sidebar" aria-label="Ajuda e documentação">
-
-                <details class="card card--info">
-
-                    <summary>Como utilizar</summary>
-
-                    <div class="card-body">
-
-                        <p>
-
-                            A análise é feita só com um <strong>arquivo JSON</strong> exportado por você.
-
-                            Não é necessário informar chaves AWS nem senhas nesta interface.
-
-                        </p>
-
-                        <p><strong>Gerar o JSON no AWS CLI</strong></p>
-
-                        <div class="comando">
-
-                            <button type="button" class="copy-bottom" onclick="copyCode(this)" aria-label="Copiar comando" title="Copiar comando">⧉</button>
-
-                            <code>aws ec2 describe-instances --query "Reservations[*].Instances[*].{InstanceId:InstanceId, InstanceType:InstanceType, State:State.Name, LaunchTime:LaunchTime, Tags:Tags}" &gt; ec2_resources.json</code>
-
-                        </div>
-
-                    </div>
-
-                </details>
-
-
-
-                <details class="card card--info">
-
-                    <summary>Saiba mais sobre o CloudSaver</summary>
-
-                    <div class="card-body">
-
-                        <p>
-
-                            O CloudSaver identifica <strong>recursos ociosos na AWS</strong>,
-
-                            calcula o <strong>desperdício financeiro</strong> e gera
-
-                            <strong>diagnósticos</strong> via LLM quando a chave Groq está configurada no servidor.
-
-                        </p>
-
-                    </div>
-
-                </details>
-
-            </aside>
-
-        </div>
-
-    </main>
-
-    <script src="app.js"></script>
-
+            <section class="benefit-grid" aria-label="Benefícios do CloudSaver">
+                <article class="benefit-card"><span class="benefit-icon" aria-hidden="true">1</span><h3>Visão rápida</h3><p>Veja quais recursos podem estar gerando custo sem necessidade.</p></article>
+                <article class="benefit-card"><span class="benefit-icon" aria-hidden="true">2</span><h3>Decisão baseada em dados</h3><p>Compare recursos, tipos e custos estimados antes de escolher uma ação.</p></article>
+                <article class="benefit-card"><span class="benefit-icon" aria-hidden="true">3</span><h3>Mais segurança</h3><p>Suas credenciais permanecem no AWS CLI. O CloudSaver recebe apenas o JSON selecionado.</p></article>
+            </section>
+            <section class="next-step card" aria-labelledby="proximo-passo">
+                <p class="section-kicker">Próximo passo</p>
+                <h2 id="proximo-passo">Prepare seu arquivo JSON</h2>
+                <p>Aprenda como gerar o relatório no seu computador e depois envie-o para análise.</p>
+                <a class="text-link" href="gerar-json.html">Ir para Como gerar JSON →</a>
+            </section>
+        </main>
+    </div>
 </body>
-
 </html>
-
