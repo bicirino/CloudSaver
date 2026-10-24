@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: cloudsaver
+  config:
+    import: optional:file:.env[.properties]
 
 groq:
   api:
     key: ${GROQ_API_KEY:}
-  api-url: ${GROQ_API_URL:https://api.groq.com/openai/v1/chat/completions}
+    url: ${GROQ_API_URL:https://api.groq.com/openai/v1/chat/completions}
   model: ${GROQ_MODEL:llama-3.3-70b-versatile}
