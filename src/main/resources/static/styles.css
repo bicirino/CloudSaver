@@ -2125,14 +2125,15 @@ code {
 
 .comando {
     position: relative;
-    margin-top: 14px;
     display: flex;
-    align-items: flex-start;
-    padding: 16px 58px 16px 16px;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 10px 12px 10px 16px;
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    overflow-x: auto;
+    overflow: hidden;
     border: 1px solid #b8cbea;
     border-radius: 5px;
     background: #edf4ff;
@@ -2155,9 +2156,14 @@ code {
 
 .comando code {
     display: block;
+    flex: 1 1 auto;
+    order: 1;
     width: auto;
     min-width: 0;
-    padding: 0;
+    max-width: 100%;
+    padding: 2px 0 6px;
+    overflow-x: scroll;
+    overflow-y: hidden;
     border: 0;
     color: #173b70;
     background: transparent !important;
@@ -2168,32 +2174,55 @@ code {
     white-space: nowrap;
     overflow-wrap: normal;
     word-break: normal;
+    scrollbar-color: #7f97b5 #d7e4f5;
+    scrollbar-width: thin;
 }
 
-.cli-prompt {
+.comando code::-webkit-scrollbar {
+    height: 8px;
+}
+
+.comando code::-webkit-scrollbar-track {
+    background: #d7e4f5;
+    border-radius: 999px;
+}
+
+.comando code::-webkit-scrollbar-thumb {
+    background: #7f97b5;
+    border-radius: 999px;
+}
+
+.comando span {
+    display: inline;
+    white-space: nowrap;
+}
+
+.comando .cli-prompt {
     color: #64748b;
 }
 
-.cli-command {
+.comando .cli-command {
     color: #14733f;
     font-weight: 700;
 }
 
-.cli-option {
+.comando .cli-option {
     color: #173b70;
 }
 
-.cli-string {
+.comando .cli-string {
     color: #8a5a00;
 }
 
 .copy-bottom {
+    position: static;
     z-index: 1;
-    top: 10px;
-    right: 10px;
+    flex: 0 0 auto;
+    order: 2;
     display: grid;
     width: 28px;
     height: 28px;
+    margin: 0;
     padding: 0;
     place-items: center;
     border: 1px solid #9aabba;
