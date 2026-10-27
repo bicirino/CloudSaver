@@ -62,6 +62,37 @@ function escaparHtml(texto) {
         .replaceAll("'", '&#039;');
 }
 
+function formatarCelulaMarkdown(texto) {
+    return escaparHtml(texto.trim())
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.+?)__/g, '<strong>$1</strong>');
+}
+
+function ehSeparadorDeTabela(linha) {
+    const celulas = linha.trim().replace(/^\||\|$/g, '').split('|');
+    return celulas.length >= 2
+        && celulas.every((celula) => /^\s*:?-{3,}:?\s*$/.test(celula));
+}
+
+function separarCelulasTabela(linha) {
+    return linha.trim().replace(/^\||\|$/g, '').split('|');
+}
+
+function ehTituloPrioridade(linha) {
+    return linha.replace(/[*_:#]/g, '').trim().toLowerCase() === 'prioridade de ação';
+}
+
+function renderizarTabelaPrioridade(acao, prioridade, justificativa) {
+    return `<div class="markdown-table-wrap"><table class="markdown-table">
+        <thead><tr><th scope="col">Ação</th><th scope="col">Prioridade</th><th scope="col">Por quê</th></tr></thead>
+        <tbody><tr>
+            <td>${formatarCelulaMarkdown(acao)}</td>
+            <td class="prioridade prioridade--${prioridade.toLowerCase()}">${formatarCelulaMarkdown(prioridade)}</td>
+            <td>${formatarCelulaMarkdown(justificativa)}</td>
+        </tr></tbody>
+    </table></div>`;
+}
+
 function formatarMarkdown(texto) {
     const linhas = texto.split(/\r?\n/);
     const html = [];
@@ -78,10 +109,59 @@ function formatarMarkdown(texto) {
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/__(.+?)__/g, '<strong>$1</strong>');
 
-    for (const linha of linhas) {
+    for (let indice = 0; indice < linhas.length; indice++) {
+        const linha = linhas[indice];
         const conteudo = linha.trim();
         const itemNumerado = conteudo.match(/^\d+\.\s+(.+)$/);
         const itemMarcado = conteudo.match(/^[-*]\s+(.+)$/);
+
+        if (ehTituloPrioridade(conteudo)
+            && linhas[indice + 2]
+            && /^[-*]\s+/.test(linhas[indice + 1].trim())
+            && /^[-*]\s+/.test(linhas[indice + 2].trim())) {
+            fecharLista();
+            const prioridadeTexto = linhas[indice + 1].trim().replace(/^[-*]\s+/, '');
+            const prioridade = prioridadeTexto.match(/\b(alta|m[ée]dia|baixa)\b/i)?.[1] ?? 'Baixa';
+            const acao = 'Ação recomendada';
+            const justificativa = linhas[indice + 2].trim().replace(/^[-*]\s+/, '');
+            html.push(`<p><strong>Prioridade de ação</strong></p>`);
+            html.push(renderizarTabelaPrioridade(acao, prioridade, justificativa));
+            indice += 2;
+            continue;
+        }
+
+        if (conteudo.includes('|') && linhas[indice + 1]
+            && ehSeparadorDeTabela(linhas[indice + 1])) {
+            fecharLista();
+            const cabecalho = separarCelulasTabela(conteudo);
+            const linhasTabela = [];
+            let indiceLinha = indice + 2;
+
+            while (indiceLinha < linhas.length
+                && linhas[indiceLinha].trim().includes('|')
+                && linhas[indiceLinha].trim() !== '') {
+                linhasTabela.push(separarCelulasTabela(linhas[indiceLinha]));
+                indiceLinha++;
+            }
+
+            html.push('<div class="markdown-table-wrap"><table class="markdown-table"><thead><tr>');
+            html.push(cabecalho.map((celula) => `<th scope="col">${formatarCelulaMarkdown(celula)}</th>`).join(''));
+            html.push('</tr></thead><tbody>');
+            linhasTabela.forEach((celulas) => {
+                html.push('<tr>');
+                cabecalho.forEach((_, indiceCelula) => {
+                    const celula = celulas[indiceCelula] ?? '';
+                    const classePrioridade = indiceCelula === 1
+                        ? ` class="prioridade prioridade--${celula.trim().toLowerCase()}"`
+                        : '';
+                    html.push(`<td${classePrioridade}>${formatarCelulaMarkdown(celula)}</td>`);
+                });
+                html.push('</tr>');
+            });
+            html.push('</tbody></table></div>');
+            indice = indiceLinha - 1;
+            continue;
+        }
 
         if (itemNumerado || itemMarcado) {
             const tipo = itemNumerado ? 'ol' : 'ul';

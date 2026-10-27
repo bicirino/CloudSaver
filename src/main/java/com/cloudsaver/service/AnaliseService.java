@@ -159,7 +159,21 @@ public class AnaliseService {
         for (InstanciaEc2 i : paradas) {
             sb.append("  * ").append(i.getInstanceId()).append(" (").append(i.getInstanceType()).append(")\n");
         }
-        sb.append("\nForneça: avaliação do impacto financeiro, recomendação prática e prioridade de ação.");
+        sb.append("""
+
+                Forneça a resposta em português, usando exatamente estas seções:
+                1. Avaliação do impacto financeiro
+                2. Recomendação prática
+                3. Prioridade de ação
+
+                Na seção "Prioridade de ação", responda obrigatoriamente com uma tabela Markdown,
+                sem lista, neste formato exato:
+                | Ação | Prioridade | Por quê |
+                |---|---|---|
+                | descrição da ação | Alta, Média ou Baixa | justificativa |
+
+                Não altere os nomes das colunas e não coloque a prioridade fora da tabela.
+                """);
         return sb.toString();
     }
 }
