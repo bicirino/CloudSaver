@@ -1050,16 +1050,34 @@ code {
 
 
 
-.recomendacao p {
-
+.recomendacao-conteudo {
     margin: 0;
-
     font-size: 14px;
-
     line-height: 1.65;
+}
 
-    white-space: pre-wrap;
+.recomendacao-conteudo p {
+    margin: 0 0 12px;
+}
 
+.recomendacao-conteudo p:last-child {
+    margin-bottom: 0;
+}
+
+.recomendacao-conteudo ul,
+.recomendacao-conteudo ol {
+    margin: 0 0 14px;
+    padding-left: 24px;
+}
+
+.recomendacao-conteudo li {
+    margin: 4px 0;
+    padding-left: 3px;
+}
+
+.recomendacao-conteudo strong {
+    color: #172b4d;
+    font-weight: 700;
 }
 
 

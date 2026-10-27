@@ -53,12 +53,63 @@ function mostrarErroAnalise(mensagem) {
     el.hidden = !mensagem;
 }
 
+function escaparHtml(texto) {
+    return texto
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function formatarMarkdown(texto) {
+    const linhas = texto.split(/\r?\n/);
+    const html = [];
+    let listaAtual = null;
+
+    const fecharLista = () => {
+        if (listaAtual) {
+            html.push(`</${listaAtual}>`);
+            listaAtual = null;
+        }
+    };
+
+    const formatarLinha = (linha) => escaparHtml(linha)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    for (const linha of linhas) {
+        const conteudo = linha.trim();
+        const itemNumerado = conteudo.match(/^\d+\.\s+(.+)$/);
+        const itemMarcado = conteudo.match(/^[-*]\s+(.+)$/);
+
+        if (itemNumerado || itemMarcado) {
+            const tipo = itemNumerado ? 'ol' : 'ul';
+            const item = itemNumerado ? itemNumerado[1] : itemMarcado[1];
+            if (listaAtual !== tipo) {
+                fecharLista();
+                html.push(`<${tipo}>`);
+                listaAtual = tipo;
+            }
+            html.push(`<li>${formatarLinha(item)}</li>`);
+        } else if (conteudo) {
+            fecharLista();
+            html.push(`<p>${formatarLinha(conteudo)}</p>`);
+        } else {
+            fecharLista();
+        }
+    }
+
+    fecharLista();
+    return html.join('');
+}
+
 function renderizarResultado(dados) {
     document.getElementById('res-total-paradas').textContent = dados.totalParadas ?? 0;
     document.getElementById('res-custo-mensal').textContent = formatarUsd(dados.custoMensal);
 
     const recomendacao = dados.recomendacao ?? 'Sem recomendação.';
-    document.getElementById('res-recomendacao').textContent = recomendacao;
+    document.getElementById('res-recomendacao').innerHTML = formatarMarkdown(recomendacao);
 
     const tbody = document.getElementById('res-tabela-instancias');
     tbody.replaceChildren();
