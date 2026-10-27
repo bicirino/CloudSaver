@@ -884,6 +884,12 @@ code {
 
 }
 
+.analise-loading[hidden] {
+
+    display: none;
+
+}
+
 
 
 .spinner {
