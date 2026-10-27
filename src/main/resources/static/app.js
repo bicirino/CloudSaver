@@ -24,37 +24,14 @@ async function copyCode(button) {
     // Tenta copiar o texto do elemento <code> para a área de transferência
     try {
         await navigator.clipboard.writeText(codeElement.innerText);
-        button.setAttribute('aria-label', 'Comando copiado');
-        button.setAttribute('title', 'Comando copiado');
-        mostrarNotificacaoCopia('Comando copiado', true);
+        container.classList.remove('is-copiado');
+        void container.offsetWidth;
+        container.classList.add('is-copiado');
     } catch (error) {
         console.error('Erro ao copiar:', error);
         button.setAttribute('aria-label', 'Erro ao copiar comando');
         button.setAttribute('title', 'Erro ao copiar comando');
-        mostrarNotificacaoCopia('Não foi possível copiar o comando', false);
     }
-}
-
-function mostrarNotificacaoCopia(mensagem, sucesso) {
-    const notificacao = document.getElementById('copy-notification');
-    if (!notificacao) {
-        return;
-    }
-
-    const textoNotificacao = notificacao.querySelector('span');
-    if (textoNotificacao) {
-        textoNotificacao.textContent = mensagem;
-    }
-    notificacao.classList.toggle('is-error', !sucesso);
-    notificacao.hidden = false;
-    notificacao.classList.remove('is-visible');
-    requestAnimationFrame(() => notificacao.classList.add('is-visible'));
-
-    clearTimeout(mostrarNotificacaoCopia.timeoutId);
-    mostrarNotificacaoCopia.timeoutId = setTimeout(() => {
-        notificacao.classList.remove('is-visible');
-        notificacao.hidden = true;
-    }, 2200);
 }
 
 // Função para formatar o valor em USD 
