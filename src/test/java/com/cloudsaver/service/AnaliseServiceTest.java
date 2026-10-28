@@ -100,4 +100,40 @@ class AnaliseServiceTest {
         // running EC2 (7.59) + EBS (8.00) + IPv4 (3.65); stopped compute is zero.
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("19.24"));
     }
+
+    @Test
+    void deveIgnorarEnvelopesDeColecaoSemRecursos() {
+        String inventario = """
+                {
+                  "ec2Instances": [
+                    {
+                      "value": [
+                        {
+                          "InstanceId": "i-running",
+                          "InstanceType": "t3.micro",
+                          "State": "running"
+                        }
+                      ],
+                      "Count": 1
+                    }
+                  ],
+                  "ebsVolumes": [
+                    { "value": [], "Count": 0 }
+                  ],
+                  "ebsSnapshots": [
+                    { "value": [], "Count": 0 }
+                  ],
+                  "elasticIps": [
+                    { "value": [], "Count": 0 }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getTotalRecursos()).isEqualTo(1);
+        assertThat(resultado.getRecursos()).extracting("id")
+                .containsExactly("i-running");
+    }
 }

@@ -140,10 +140,27 @@ public class AnaliseService {
     private void adicionarColecao(List<RecursoAws> recursos, JsonNode raiz,
                                   String campo, String servico, String campoId) {
         JsonNode colecao = raiz.get(campo);
-        if (colecao == null || !colecao.isArray()) {
+        if (colecao == null) {
             return;
         }
-        colecao.forEach(item -> adicionarRecurso(recursos, item, servico, campoId));
+        adicionarItensColecao(recursos, colecao, servico, campoId);
+    }
+
+    private void adicionarItensColecao(List<RecursoAws> recursos, JsonNode colecao,
+                                       String servico, String campoId) {
+        if (colecao.isArray()) {
+            colecao.forEach(item -> adicionarItensColecao(recursos, item, servico, campoId));
+            return;
+        }
+        if (!colecao.isObject()) {
+            return;
+        }
+        JsonNode valor = colecao.get("value");
+        if (valor != null) {
+            adicionarItensColecao(recursos, valor, servico, campoId);
+            return;
+        }
+        adicionarRecurso(recursos, colecao, servico, campoId);
     }
 
     private void adicionarRecurso(List<RecursoAws> recursos, JsonNode item,
