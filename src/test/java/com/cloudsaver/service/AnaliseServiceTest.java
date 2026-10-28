@@ -1,5 +1,10 @@
 package com.cloudsaver.service;
 
+/*
+  Arquivo para testes unitários do serviço de análise do CloudSaver
+
+*/
+
 import com.cloudsaver.dto.ResultadoAnalise;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -12,8 +17,7 @@ class AnaliseServiceTest {
 
     private final AnaliseService service = new AnaliseService();
 
-    // JSON com duas instâncias: uma stopped e uma running.
-    // O serviço deve identificar apenas a parada e calcular o custo correto.
+    // Testando com JSON hardcoded para simular a entrada de dados de instâncias EC2
     private static final String JSON = """
             [
               {
@@ -67,5 +71,33 @@ class AnaliseServiceTest {
 
         assertThat(resultado.getTotalParadas()).isZero();
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void deveAnalisarInventarioComVariosServicos() {
+        String inventario = """
+                {
+                  "ec2Instances": [
+                    { "InstanceId": "i-running", "InstanceType": "t3.micro", "State": "running" },
+                    { "InstanceId": "i-stopped", "InstanceType": "t3.micro", "State": "stopped" }
+                  ],
+                  "ebsVolumes": [
+                    { "VolumeId": "vol-001", "VolumeType": "gp3", "Size": 100, "State": "available" }
+                  ],
+                  "elasticIps": [
+                    { "AllocationId": "eipalloc-001", "PublicIp": "203.0.113.10" }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getTotalRecursos()).isEqualTo(4);
+        assertThat(resultado.getTotalParadas()).isEqualTo(3);
+        assertThat(resultado.getRecursos()).extracting("servico")
+                .containsExactly("EC2", "EC2", "EBS", "Elastic IP");
+        // running EC2 (7.59) + EBS (8.00) + IPv4 (3.65); stopped compute is zero.
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("19.24"));
     }
 }

@@ -185,26 +185,29 @@ function formatarMarkdown(texto) {
 }
 
 function renderizarResultado(dados) {
+    document.getElementById('res-total-recursos').textContent =
+        dados.totalRecursos ?? (dados.instancias?.length ?? 0);
     document.getElementById('res-total-paradas').textContent = dados.totalParadas ?? 0;
     document.getElementById('res-custo-mensal').textContent = formatarUsd(dados.custoMensal);
 
     const recomendacao = dados.recomendacao ?? 'Sem recomendação.';
     document.getElementById('res-recomendacao').innerHTML = formatarMarkdown(recomendacao);
 
-    const tbody = document.getElementById('res-tabela-instancias');
+    const tbody = document.getElementById('res-tabela-recursos');
     tbody.replaceChildren();
 
-    const lista = dados.instancias ?? [];
+    const lista = dados.recursos ?? dados.instancias ?? [];
     if (lista.length === 0) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" class="table-empty">Nenhuma instância parada encontrada.</td>';
+        tr.innerHTML = '<td colspan="4" class="table-empty">Nenhum recurso encontrado.</td>';
         tbody.appendChild(tr);
     } else {
         for (const item of lista) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${item.id ?? '—'}</td>
-                <td>${item.tipo ?? '—'}</td>
+                <td>${escaparHtml(String(item.id ?? '—'))}</td>
+                <td>${escaparHtml(String(item.servico ?? 'EC2'))}</td>
+                <td>${escaparHtml(String(item.tipo ?? '—'))}${item.estado ? ` / ${escaparHtml(String(item.estado))}` : ''}</td>
                 <td>${formatarUsd(item.custoMensal)}</td>
             `;
             tbody.appendChild(tr);

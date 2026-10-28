@@ -11,10 +11,23 @@ import java.util.List;
 @Builder
 public class ResultadoAnalise {
 
+    private int totalRecursos;
     private int totalParadas;
     private BigDecimal custoMensal;
     private String recomendacao;
+    private List<RecursoResumo> recursos;
     private List<InstanciaResumo> instancias;
+
+    @Getter
+    @Builder
+    public static class RecursoResumo {
+        private String id;
+        private String servico;
+        private String tipo;
+        private String estado;
+        private BigDecimal custoMensal;
+        private boolean ocioso;
+    }
 
     @Getter
     @Builder

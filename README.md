@@ -12,6 +12,8 @@
 
 Plataforma Cloud-Native para identificação automatizada de recursos ociosos na AWS, cálculo de desperdício financeiro e geração de diagnósticos estratégicos via LLM, acompanhada de um dashboard intuitivo e interativo 
 
+> A versão atual analisa um inventário JSON enviado pelo usuário. Ela calcula o custo estimado de todos os recursos suportados, e não somente de instâncias EC2 paradas.
+
 
 ## 📌 1. Visão Geral do Projeto
 
@@ -22,6 +24,14 @@ O **CloudSaver** é uma solução completa desenvolvida em **Java** e **Spring B
 Todo o ciclo de compilação, testes, empacotamento em contentores e deploy em cluster **Kubernetes / OpenShift** é automatizado por pipelines declarativas no **Jenkins**.
 
 ---
+
+## Inventário AWS analisado
+
+Não há um único comando do AWS CLI que descreva toda a infraestrutura de todas as regiões e serviços. A tela **Como gerar JSON** fornece um script PowerShell que consolida chamadas para EC2, volumes e snapshots EBS, Elastic IPs, NAT Gateways e RDS em um único `resources.json`. Execute-o uma vez por região e consolide os arquivos se sua conta usar mais de uma região.
+
+O formato de entrada é um objeto com coleções como `ec2Instances`, `ebsVolumes`, `ebsSnapshots`, `elasticIps`, `natGateways`, `loadBalancers` e `rdsInstances`. Cada recurso pode informar `monthlyCost` (recomendado, especialmente para RDS, S3, load balancers e tráfego). Quando esse valor não é informado, o sistema usa estimativas configuradas para EC2, EBS, snapshots, IPv4 público e NAT Gateway. Custos de dados transferidos, requisições, I/O e camadas variáveis não podem ser calculados apenas pelo inventário e devem ser obtidos pelo AWS Cost Explorer ou adicionados como `monthlyCost`.
+
+Em um inventário estruturado, instâncias EC2 `running` têm custo de computação estimado; instâncias `stopped` têm computação zero, mas volumes EBS associados continuam sendo cobrados. O formato legado, que era uma lista direta de instâncias, continua aceito e mantém o comportamento anterior.
 
 ## 🛠️ 2. Stacks e Tecnologias Utilizadas
 
@@ -185,4 +195,3 @@ Aceda à interface web em `http://localhost:8080`.
 | `GET` | `/api/v1/finops/reports/latest` | Retorna o último relatório de análise de custos e recursos. |
 | `GET` | `/api/v1/finops/resources/idle` | Lista individualmente todos os recursos ociosos identificados. |
 | `GET` | `/actuator/prometheus` | Expõe as métricas do sistema e contadores de varredura para o Prometheus. |
-
