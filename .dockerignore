@@ -1,0 +1,25 @@
+# Artefatos da Build 
+target/
+
+# Arquivos do Maven e da IDE 
+.mvn/
+.idea/
+*.iml
+
+# Arquivos do GIT 
+.git/
+.gitignore
+
+# Configurações de ambiente local 
+.env
+.env.*
+!.env.example
+
+# AWS LOCAL 
+ec2_resources.json
+resources.json
+
+# Logs e arquivos temporários 
+*.log
+logs/
+tmp/
