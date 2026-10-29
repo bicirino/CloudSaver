@@ -1,13 +1,3 @@
-function realizarLogin(event) {
-
-    // Impede a página de recarregar automaticamente 
-    event.preventDefault();
-
-
-    window.location.href = "index.html";
-}
-
-
 // Cria uma função assíncrona (executa em segundo plano) para copiar o comando de código 
 async function copyCode(button) {
 
