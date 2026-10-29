@@ -1,3 +1,6 @@
+# Arquivo para otimizar construção da imagem Docker, ignorando arquivos desnecessários
+#__________________________________________________________________________________________
+
 # Artefatos da Build 
 target/
 
