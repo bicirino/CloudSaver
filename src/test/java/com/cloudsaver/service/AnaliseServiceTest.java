@@ -136,4 +136,62 @@ class AnaliseServiceTest {
         assertThat(resultado.getRecursos()).extracting("id")
                 .containsExactly("i-running");
     }
+
+    @Test
+    void deveReconhecerCamposPadronizadosDoInventarioEManterCustosInformados() {
+        String inventario = """
+                {
+                  "resources": [
+                    {
+                      "resourceId": "i-0a1b2c3d4e5f6g7h8",
+                      "resourceType": "EC2",
+                      "status": "running",
+                      "monthly_cost": 121.18
+                    },
+                    {
+                      "resource_id": "db-prod",
+                      "resource_type": "RDS",
+                      "status": "available",
+                      "costUsd": 15.50
+                    }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getRecursos()).extracting("id")
+                .containsExactly("i-0a1b2c3d4e5f6g7h8", "db-prod");
+        assertThat(resultado.getRecursos()).extracting("custoMensal")
+                .containsExactly(new BigDecimal("121.18"), new BigDecimal("15.50"));
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("136.68"));
+    }
+
+    @Test
+    void deveInterpretarCustoMonetarioEValorAninhado() {
+        String inventario = """
+                {
+                  "resources": [
+                    {
+                      "resourceId": "resource-1",
+                      "monthlyCost": "$121.18",
+                      "status": "running"
+                    },
+                    {
+                      "resourceId": "resource-2",
+                      "cost": { "monthly": 12.50 },
+                      "status": "available"
+                    }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getRecursos()).extracting("custoMensal")
+                .containsExactly(new BigDecimal("121.18"), new BigDecimal("12.50"));
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("133.68"));
+    }
 }

@@ -168,21 +168,39 @@ public class AnaliseService {
         if (item == null || !item.isObject()) {
             return;
         }
-        String id = texto(item, campoId, texto(item, "id", "recurso-sem-id"));
+        String id = texto(item, campoId, texto(item, "id",
+                texto(item, "resourceId", texto(item, "resource_id",
+                        texto(item, "arn", texto(item, "name", "recurso-sem-id"))))));
         String tipo = texto(item, "InstanceType", texto(item, "instanceType",
-                texto(item, "VolumeType", texto(item, "type", servico))));
+                texto(item, "DBInstanceClass", texto(item, "dbInstanceClass",
+                        texto(item, "VolumeType", texto(item, "resourceType",
+                                texto(item, "resource_type", texto(item, "type", servico))))))));
         String estado = texto(item, "State", texto(item, "state",
-                texto(item, "StateName", "unknown")));
+                texto(item, "StateName", texto(item, "status", "unknown"))));
         boolean ocioso = "stopped".equalsIgnoreCase(estado)
                 || "available".equalsIgnoreCase(estado)
                 || "unassociated".equalsIgnoreCase(estado)
                 || "unused".equalsIgnoreCase(estado)
                 || ("Elastic IP".equals(servico) && !item.hasNonNull("AssociationId"));
         recursos.add(new RecursoAws(id, servico, tipo, estado,
-                valorDecimal(item, "monthlyCost", valorDecimal(item, "custoMensal",
-                        valorDecimal(item, "costMonthly", valorDecimal(item, "MonthlyCost",
-                                valorDecimal(item, "cost", null))))),
+                custoInformado(item),
                 ocioso, item));
+    }
+
+    private BigDecimal custoInformado(JsonNode item) {
+        BigDecimal padrao = null;
+        String[] campos = {
+                "monthlyCost", "monthly_cost", "custoMensal", "costMonthly",
+                "MonthlyCost", "monthlyCostUsd", "monthlyCostUSD", "monthly_cost_usd",
+                "costUsd", "costUSD", "estimatedMonthlyCost", "monthly", "cost"
+        };
+        for (String campo : campos) {
+            BigDecimal valor = valorDecimal(item, campo, padrao);
+            if (valor != null) {
+                return valor;
+            }
+        }
+        return null;
     }
 
     private String texto(JsonNode node, String campo, String padrao) {
@@ -198,11 +216,25 @@ public class AnaliseService {
 
     private BigDecimal valorDecimal(JsonNode node, String campo, BigDecimal padrao) {
         JsonNode valor = node.get(campo);
+        if (valor != null && valor.isObject()) {
+            valor = valor.has("value") ? valor.get("value")
+                    : valor.has("amount") ? valor.get("amount")
+                    : valor.has("monthly") ? valor.get("monthly")
+                    : valor.has("monthlyCost") ? valor.get("monthlyCost") : null;
+        }
         if (valor == null || !valor.isNumber() && !valor.isTextual()) {
             return padrao;
         }
         try {
-            return new BigDecimal(valor.asText());
+            String texto = valor.asText().trim()
+                    .replaceAll("(?i)usd|us\\$|\\$", "")
+                    .replace(" ", "");
+            if (texto.contains(",") && texto.contains(".")) {
+                texto = texto.replace(",", "");
+            } else if (texto.contains(",")) {
+                texto = texto.replace(',', '.');
+            }
+            return new BigDecimal(texto);
         } catch (NumberFormatException e) {
             return padrao;
         }
