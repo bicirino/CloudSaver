@@ -169,6 +169,23 @@ class AnaliseServiceTest {
     }
 
     @Test
+    void deveReconhecerFormatoEc2ResourcesJson() throws Exception {
+        byte[] json = getClass().getResourceAsStream("/ec2_resources_sample.json").readAllBytes();
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "ec2_resources.json", "application/json", json));
+
+        assertThat(resultado.getRecursos()).extracting("id")
+                .containsExactly("i-0a1b2c3d4e5f6g7h8", "i-0987654321fedcba0", "vol-0f1e2d3c4b5a69788");
+        assertThat(resultado.getRecursos()).extracting("servico")
+                .containsExactly("EC2", "EC2", "EBS");
+        assertThat(resultado.getRecursos()).extracting("tipo")
+                .containsExactly("t3.xlarge", "t3.medium", "gp2");
+        assertThat(resultado.getRecursos()).extracting("custoMensal")
+                .containsExactly(new BigDecimal("121.18"), new BigDecimal("30.40"), new BigDecimal("50.00"));
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("201.58"));
+    }
+
+    @Test
     void deveInterpretarCustoMonetarioEValorAninhado() {
         String inventario = """
                 {

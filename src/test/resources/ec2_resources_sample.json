@@ -1,0 +1,35 @@
+{
+  "account_id": "123456789012",
+  "region": "us-east-1",
+  "scan_timestamp": "2026-10-30T18:00:00Z",
+  "resources": [
+    {
+      "resource_id": "i-0a1b2c3d4e5f6g7h8",
+      "resource_type": "EC2",
+      "name": "web-server-prod-01",
+      "instance_type": "t3.xlarge",
+      "state": "running",
+      "cpu_utilization_avg_percent": 3.2,
+      "memory_utilization_avg_percent": 12.5,
+      "monthly_cost_usd": 121.18,
+      "tags": {"Environment": "Production", "Project": "FinOps"}
+    },
+    {
+      "resource_id": "i-0987654321fedcba0",
+      "resource_type": "EC2",
+      "name": "staging-dev-box",
+      "instance_type": "t3.medium",
+      "state": "stopped",
+      "monthly_cost_usd": 30.4
+    },
+    {
+      "resource_id": "vol-0f1e2d3c4b5a69788",
+      "resource_type": "EBS",
+      "name": "unattached-db-backup",
+      "size_gb": 500,
+      "volume_type": "gp2",
+      "state": "available",
+      "monthly_cost_usd": 50.0
+    }
+  ]
+}

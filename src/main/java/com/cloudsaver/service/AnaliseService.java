@@ -115,7 +115,7 @@ public class AnaliseService {
                 adicionarColecao(recursos, raiz, "loadBalancers", "Load Balancer", "LoadBalancerArn");
                 adicionarColecao(recursos, raiz, "rdsInstances", "RDS", "DBInstanceIdentifier");
                 adicionarColecao(recursos, raiz, "s3Buckets", "S3", "Name");
-                adicionarColecao(recursos, raiz, "resources", "AWS", "Id");
+                adicionarInventarioPadronizado(recursos, raiz.get("resources"));
             }
             return recursos;
         } catch (Exception e) {
@@ -146,6 +146,13 @@ public class AnaliseService {
         adicionarItensColecao(recursos, colecao, servico, campoId);
     }
 
+    private void adicionarInventarioPadronizado(List<RecursoAws> recursos, JsonNode colecao) {
+        if (colecao == null || colecao.isNull()) {
+            return;
+        }
+        adicionarItensColecao(recursos, colecao, "AWS", "Id");
+    }
+
     private void adicionarItensColecao(List<RecursoAws> recursos, JsonNode colecao,
                                        String servico, String campoId) {
         if (colecao.isArray()) {
@@ -171,10 +178,15 @@ public class AnaliseService {
         String id = texto(item, campoId, texto(item, "id",
                 texto(item, "resourceId", texto(item, "resource_id",
                         texto(item, "arn", texto(item, "name", "recurso-sem-id"))))));
+        String servicoRecurso = servico;
+        if ("AWS".equals(servico)) {
+            servicoRecurso = texto(item, "resourceType", texto(item, "resource_type", servico));
+        }
         String tipo = texto(item, "InstanceType", texto(item, "instanceType",
-                texto(item, "DBInstanceClass", texto(item, "dbInstanceClass",
-                        texto(item, "VolumeType", texto(item, "resourceType",
-                                texto(item, "resource_type", texto(item, "type", servico))))))));
+                texto(item, "instance_type", texto(item, "DBInstanceClass",
+                        texto(item, "dbInstanceClass", texto(item, "VolumeType",
+                                texto(item, "volume_type", texto(item, "resourceType",
+                                        texto(item, "resource_type", texto(item, "type", servicoRecurso))))))))));
         String estado = texto(item, "State", texto(item, "state",
                 texto(item, "StateName", texto(item, "status", "unknown"))));
         boolean ocioso = "stopped".equalsIgnoreCase(estado)
@@ -182,7 +194,7 @@ public class AnaliseService {
                 || "unassociated".equalsIgnoreCase(estado)
                 || "unused".equalsIgnoreCase(estado)
                 || ("Elastic IP".equals(servico) && !item.hasNonNull("AssociationId"));
-        recursos.add(new RecursoAws(id, servico, tipo, estado,
+        recursos.add(new RecursoAws(id, servicoRecurso, tipo, estado,
                 custoInformado(item),
                 ocioso, item));
     }
@@ -248,7 +260,7 @@ public class AnaliseService {
         return switch (recurso.servico()) {
             case "EC2" -> "running".equalsIgnoreCase(recurso.estado())
                     ? custoMensal(recurso.tipo()) : BigDecimal.ZERO;
-            case "EBS" -> valorDecimal(dados, "Size", BigDecimal.ZERO)
+            case "EBS" -> valorDecimal(dados, "Size", valorDecimal(dados, "size_gb", BigDecimal.ZERO))
                     .multiply(EBS_GB_MES).setScale(2, RoundingMode.HALF_UP);
             case "EBS Snapshot" -> valorDecimal(dados, "VolumeSize", valorDecimal(dados, "Size", BigDecimal.ZERO))
                     .multiply(SNAPSHOT_GB_MES).setScale(2, RoundingMode.HALF_UP);
