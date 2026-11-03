@@ -2,17 +2,12 @@ pipeline {
 
     agent any 
     
+    options{ 
+        timeout(time: 15, unit: 'MINUTES')
+        timestamps()  
+    }
 
     stages { 
-
-        stage('Checkout'){ 
-            
-            steps{ 
-                echo 'Baixando código do repositório...' 
-                checkout scm 
-
-            }
-        }
 
         stage ('Build'){ 
             steps{
@@ -31,6 +26,18 @@ pipeline {
     }
 
     post{ 
+
+        always{
+            // Publica no Jenkins os relatórios XML dos testes Maven - para visualizar testes aprovados, falhos e etc
+            junit 'target/surefire-reports/*.xml'
+
+            // Guarda os arquivos .jar gerados no build para download posterior (artefatos de execução)
+            archiveArtifacts artifcats: 'target/*.jar', fingerprint: true
+            
+            // Limpa o workspace do Jenkins após a execução do pipeline - isso ajuda a economizar espaço em disco 
+            cleanWs() 
+        }
+
         success{ 
             echo 'Pipeline executada com sucesso!' 
         }
