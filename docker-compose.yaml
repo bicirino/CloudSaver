@@ -1,0 +1,39 @@
+services: 
+  
+  # Serviço principal da aplicação, que será construído a partir do Dockerfile  
+  app: 
+    # Constrói a imagem a partir do Dockerfile, ao invés de usar uma imagem pronta
+    build: . 
+    
+    # Mapeia as portas da aplicação 
+    ports: 
+      - "8080:8080"
+    
+    # Define variáveis de ambiente para a aplicação rodar corretamente 
+    environment:
+      - GROQ_API_KEY: ${GROQ_API_KEY}
+      - GROQ_API_URL: ${GROQ_API_URL:-https://api.groq.com/openai/v1/chat/completions}
+      - GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+
+    # Garante que o container reinicie automaticamente caso ele falhe até que seja parado manualmente
+    restart: unless-stopped    
+
+  # Serviço do Jenkins, que será usado para CI/CD e automação de builds 
+  jenkins: 
+    # Usa uma imagem oficial do Jenkins com suporte a JDK 17
+    image: jenkins/jenkins:2.516.3-lts-jdk17 
+
+    # Mapeia as portas da aplicação 
+    ports: 
+      - "8081:8080"
+
+    # Cria um volume persistente para guardar os dados do Jenkins - histórico, plugins, configurações, etc.
+    volumes: 
+      - jenkins_home:/var/jenkins_home
+
+    # Garante que o container reinicie automaticamente caso ele falhe até que seja parado manualmente
+    restart: unless-stopped 
+
+# Declara e cria oficialmente o volume gerido pelo Docker 
+volumes: 
+  jenkins_home: 
