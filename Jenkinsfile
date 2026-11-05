@@ -11,6 +11,8 @@ pipeline {
         timestamps()  
     }
 
+    // Só funciona com tunnel do Cloudflare ativo! 
+    // cloudflared tunnel --url http://localhost:8081
     triggers{ 
         githubPush() 
     }
