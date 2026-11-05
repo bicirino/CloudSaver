@@ -36,6 +36,86 @@ function formatarUsd(valor) {
     }).format(numero);
 }
 
+let graficoCustosServico;
+let graficoCustosRecurso;
+
+function renderizarGraficos(recursos) {
+    if (typeof Chart === 'undefined') {
+        console.error('Não foi possível carregar a biblioteca de gráficos.');
+        return;
+    }
+
+    graficoCustosServico?.destroy();
+    graficoCustosRecurso?.destroy();
+
+    const custosPorServico = new Map();
+    const labelsRecursos = [];
+    const custosRecursos = [];
+
+    recursos.forEach((recurso, indice) => {
+        const custo = Number(recurso.custoMensal);
+        if (!Number.isFinite(custo) || custo < 0) {
+            return;
+        }
+
+        const servico = String(recurso.servico ?? 'Outros');
+        custosPorServico.set(servico, (custosPorServico.get(servico) ?? 0) + custo);
+        labelsRecursos.push(String(recurso.id ?? `Recurso ${indice + 1}`));
+        custosRecursos.push(custo);
+    });
+
+    const cores = ['#123b9c', '#f59e0b', '#23815e', '#a855f7', '#ef4444', '#0891b2', '#64748b'];
+    const labelsServicos = [...custosPorServico.keys()];
+    const valoresServicos = [...custosPorServico.values()];
+
+    graficoCustosServico = new Chart(document.getElementById('grafico-custos-servico'), {
+        type: 'pie',
+        data: {
+            labels: labelsServicos,
+            datasets: [{
+                data: valoresServicos,
+                backgroundColor: labelsServicos.map((_, indice) => cores[indice % cores.length]),
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
+            },
+        },
+    });
+
+    graficoCustosRecurso = new Chart(document.getElementById('grafico-custos-recurso'), {
+        type: 'bar',
+        data: {
+            labels: labelsRecursos,
+            datasets: [{
+                label: 'Custo mensal',
+                data: custosRecursos,
+                backgroundColor: '#123b9c',
+                borderRadius: 5,
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: (valor) => formatarUsd(valor) },
+                },
+                x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
+            },
+        },
+    });
+}
+
 function mostrarErroAnalise(mensagem) {
     const el = document.getElementById('analise-erro');
     if (!el) return;
@@ -187,6 +267,7 @@ function renderizarResultado(dados) {
     tbody.replaceChildren();
 
     const lista = dados.recursos ?? dados.instancias ?? [];
+    renderizarGraficos(lista);
     if (lista.length === 0) {
         const tr = document.createElement('tr');
         tr.innerHTML = '<td colspan="4" class="table-empty">Nenhum recurso encontrado.</td>';

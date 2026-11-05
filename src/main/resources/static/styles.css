@@ -1538,6 +1538,51 @@ code {
     background: #eaeded;
 }
 
+.graficos-custos {
+    margin-bottom: 24px;
+}
+
+.graficos-custos > h4 {
+    margin: 0 0 10px;
+    color: var(--blue);
+    font-size: 14px;
+}
+
+.graficos-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+    gap: 16px;
+}
+
+.grafico-card {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.grafico-card h5 {
+    margin: 0 0 12px;
+    color: var(--blue);
+    font-size: 13px;
+}
+
+.grafico-area {
+    position: relative;
+    height: 280px;
+}
+
+.grafico-area--pizza {
+    height: 300px;
+}
+
+@media (max-width: 760px) {
+    .graficos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 860px) {
     .topnav {
         display: none;
