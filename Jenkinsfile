@@ -32,7 +32,7 @@ pipeline {
             junit 'target/surefire-reports/*.xml'
 
             // Guarda os arquivos .jar gerados no build para download posterior (artefatos de execução)
-            archiveArtifacts artifcats: 'target/*.jar', fingerprint: true
+            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             
             // Limpa o workspace do Jenkins após a execução do pipeline - isso ajuda a economizar espaço em disco 
             cleanWs() 
