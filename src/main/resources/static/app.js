@@ -39,36 +39,103 @@ function formatarUsd(valor) {
 let graficoCustosServico;
 let graficoCustosRecurso;
 
-function renderizarGraficos(recursos) {
-    if (typeof Chart === 'undefined') {
-        console.error('Não foi possível carregar a biblioteca de gráficos.');
+function criarElementoGrafico(tipo, classe, texto) {
+    const elemento = document.createElement(tipo);
+    elemento.className = classe;
+    if (texto !== undefined) {
+        elemento.textContent = texto;
+    }
+    return elemento;
+}
+
+function renderizarGraficosFallback(recursos) {
+    const areaPizza = document.querySelector('.grafico-area--pizza');
+    const areaRecursos = document.querySelector('#grafico-custos-recurso')?.parentElement;
+    if (!areaPizza || !areaRecursos) {
         return;
     }
 
-    graficoCustosServico?.destroy();
-    graficoCustosRecurso?.destroy();
-
     const custosPorServico = new Map();
-    const labelsRecursos = [];
-    const custosRecursos = [];
+    const recursosComCusto = recursos
+        .map((recurso, indice) => ({
+            id: String(recurso.id ?? `Recurso ${indice + 1}`),
+            servico: String(recurso.servico ?? 'Outros'),
+            custo: Number(recurso.custoMensal),
+        }))
+        .filter((recurso) => Number.isFinite(recurso.custo) && recurso.custo >= 0);
 
-    recursos.forEach((recurso, indice) => {
-        const custo = Number(recurso.custoMensal);
-        if (!Number.isFinite(custo) || custo < 0) {
-            return;
-        }
-
-        const servico = String(recurso.servico ?? 'Outros');
-        custosPorServico.set(servico, (custosPorServico.get(servico) ?? 0) + custo);
-        labelsRecursos.push(String(recurso.id ?? `Recurso ${indice + 1}`));
-        custosRecursos.push(custo);
+    recursosComCusto.forEach((recurso) => {
+        custosPorServico.set(recurso.servico, (custosPorServico.get(recurso.servico) ?? 0) + recurso.custo);
     });
 
     const cores = ['#123b9c', '#f59e0b', '#23815e', '#a855f7', '#ef4444', '#0891b2', '#64748b'];
-    const labelsServicos = [...custosPorServico.keys()];
-    const valoresServicos = [...custosPorServico.values()];
+    const servicos = [...custosPorServico.entries()];
+    const total = servicos.reduce((soma, [, custo]) => soma + custo, 0);
+    let inicio = 0;
+    const fatias = servicos.map(([, custo], indice) => {
+        const fim = inicio + (total ? custo / total * 100 : 0);
+        const fatia = `${cores[indice % cores.length]} ${inicio}% ${fim}%`;
+        inicio = fim;
+        return fatia;
+    });
 
-    graficoCustosServico = new Chart(document.getElementById('grafico-custos-servico'), {
+    const pizza = criarElementoGrafico('div', 'grafico-fallback-pizza');
+    pizza.style.background = total ? `conic-gradient(${fatias.join(', ')})` : '#e5e7eb';
+    const legenda = criarElementoGrafico('div', 'grafico-fallback-legenda');
+    servicos.forEach(([servico, custo], indice) => {
+        const item = criarElementoGrafico('div', 'grafico-fallback-legenda-item');
+        const marcador = criarElementoGrafico('span', 'grafico-fallback-marcador');
+        marcador.style.backgroundColor = cores[indice % cores.length];
+        item.append(marcador, criarElementoGrafico('span', '', `${servico}: ${formatarUsd(custo)}`));
+        legenda.appendChild(item);
+    });
+    areaPizza.replaceChildren(pizza, legenda);
+
+    const maiorCusto = Math.max(...recursosComCusto.map((recurso) => recurso.custo), 0);
+    const barras = criarElementoGrafico('div', 'grafico-fallback-barras');
+    recursosComCusto.forEach((recurso) => {
+        const coluna = criarElementoGrafico('div', 'grafico-fallback-coluna');
+        const barra = criarElementoGrafico('div', 'grafico-fallback-barra');
+        barra.style.height = `${maiorCusto ? recurso.custo / maiorCusto * 100 : 0}%`;
+        barra.title = `${recurso.id}: ${formatarUsd(recurso.custo)}`;
+        coluna.append(barra, criarElementoGrafico('span', 'grafico-fallback-label', recurso.id));
+        barras.appendChild(coluna);
+    });
+    areaRecursos.replaceChildren(barras);
+}
+
+function renderizarGraficos(recursos) {
+    if (typeof Chart === 'undefined') {
+        console.error('Não foi possível carregar a biblioteca de gráficos.');
+        renderizarGraficosFallback(recursos);
+        return;
+    }
+
+    try {
+        graficoCustosServico?.destroy();
+        graficoCustosRecurso?.destroy();
+
+        const custosPorServico = new Map();
+        const labelsRecursos = [];
+        const custosRecursos = [];
+
+        recursos.forEach((recurso, indice) => {
+            const custo = Number(recurso.custoMensal);
+            if (!Number.isFinite(custo) || custo < 0) {
+                return;
+            }
+
+            const servico = String(recurso.servico ?? 'Outros');
+            custosPorServico.set(servico, (custosPorServico.get(servico) ?? 0) + custo);
+            labelsRecursos.push(String(recurso.id ?? `Recurso ${indice + 1}`));
+            custosRecursos.push(custo);
+        });
+
+        const cores = ['#123b9c', '#f59e0b', '#23815e', '#a855f7', '#ef4444', '#0891b2', '#64748b'];
+        const labelsServicos = [...custosPorServico.keys()];
+        const valoresServicos = [...custosPorServico.values()];
+
+        graficoCustosServico = new Chart(document.getElementById('grafico-custos-servico'), {
         type: 'pie',
         data: {
             labels: labelsServicos,
@@ -86,9 +153,9 @@ function renderizarGraficos(recursos) {
                 tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
             },
         },
-    });
+        });
 
-    graficoCustosRecurso = new Chart(document.getElementById('grafico-custos-recurso'), {
+        graficoCustosRecurso = new Chart(document.getElementById('grafico-custos-recurso'), {
         type: 'bar',
         data: {
             labels: labelsRecursos,
@@ -113,7 +180,11 @@ function renderizarGraficos(recursos) {
                 tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
             },
         },
-    });
+        });
+    } catch (erro) {
+        console.error('Não foi possível desenhar os gráficos:', erro);
+        renderizarGraficosFallback(recursos);
+    }
 }
 
 function mostrarErroAnalise(mensagem) {

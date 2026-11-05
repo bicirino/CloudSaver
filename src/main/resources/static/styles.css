@@ -1577,6 +1577,66 @@ code {
     height: 300px;
 }
 
+.grafico-fallback-pizza {
+    width: 190px;
+    height: 190px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+}
+
+.grafico-fallback-legenda {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.grafico-fallback-legenda-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.grafico-fallback-marcador {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
+    border-radius: 50%;
+}
+
+.grafico-fallback-barras {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    height: 100%;
+    padding: 8px 4px 24px;
+    overflow-x: auto;
+}
+
+.grafico-fallback-coluna {
+    display: flex;
+    min-width: 34px;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: end;
+    gap: 6px;
+}
+
+.grafico-fallback-barra {
+    width: 24px;
+    min-height: 2px;
+    border-radius: 5px 5px 0 0;
+    background: var(--blue-soft);
+}
+
+.grafico-fallback-label {
+    max-width: 70px;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 @media (max-width: 760px) {
     .graficos-grid {
         grid-template-columns: 1fr;
