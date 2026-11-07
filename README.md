@@ -31,12 +31,10 @@ Não há um único comando do AWS CLI que descreva toda a infraestrutura de toda
 
 O formato de entrada é um objeto com coleções como `ec2Instances`, `ebsVolumes`, `ebsSnapshots`, `elasticIps`, `natGateways`, `loadBalancers` e `rdsInstances`. Cada recurso pode informar `monthlyCost` (recomendado, especialmente para RDS, S3, load balancers e tráfego). Quando esse valor não é informado, o sistema usa estimativas configuradas para EC2, EBS, snapshots, IPv4 público e NAT Gateway. Custos de dados transferidos, requisições, I/O e camadas variáveis não podem ser calculados apenas pelo inventário e devem ser obtidos pelo AWS Cost Explorer ou adicionados como `monthlyCost`.
 
-Para consultar o custo real da conta no mês-calendário anterior, habilite a integração com
-`AWS_COST_EXPLORER_ENABLED=true`. A aplicação usa a cadeia padrão de credenciais da AWS
-(perfil local, variáveis de ambiente ou role) e a região `us-east-1` por padrão; altere com
-`AWS_COST_EXPLORER_REGION`. A permissão `ce:GetCostAndUsage` é necessária. Se a consulta
-estiver desabilitada ou falhar, o resultado mantém a estimativa do inventário e informa a
-fonte e o motivo na resposta.
+O CloudSaver não acessa a AWS, não usa IAM e não envia o inventário para serviços externos.
+Toda a análise é local: valores `monthlyCost` informados no JSON são usados como fonte
+principal; quando um recurso não informa esse valor, aplica-se a estimativa correspondente
+ao tipo e às dimensões disponíveis no inventário.
 
 Em um inventário estruturado, instâncias EC2 `running` têm custo de computação estimado; instâncias `stopped` têm computação zero, mas volumes EBS associados continuam sendo cobrados. O formato legado, que era uma lista direta de instâncias, continua aceito e mantém o comportamento anterior.
 

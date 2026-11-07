@@ -14,10 +14,7 @@ public class ResultadoAnalise {
     private int totalRecursos;
     private int totalParadas;
     private BigDecimal custoMensal;
-    private BigDecimal custoRealMensal;
     private String fonteCusto;
-    private String periodoCusto;
-    private String avisoCusto;
     private String recomendacao;
     private List<RecursoResumo> recursos;
     private List<InstanciaResumo> instancias;
