@@ -11,9 +11,16 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.costexplorer.CostExplorerClient;
+import software.amazon.awssdk.services.costexplorer.model.DateInterval;
+import software.amazon.awssdk.services.costexplorer.model.GetCostAndUsageRequest;
+import software.amazon.awssdk.services.costexplorer.model.GetCostAndUsageResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -75,6 +82,12 @@ public class AnaliseService {
     @Value("${groq.model:llama-3.3-70b-versatile}")
     private String groqModel;
 
+    @Value("${aws.cost-explorer.enabled:false}")
+    private boolean costExplorerEnabled;
+
+    @Value("${aws.cost-explorer.region:us-east-1}")
+    private String costExplorerRegion;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -106,15 +119,61 @@ public class AnaliseService {
         }
 
         String recomendacao = gerarRecomendacao(recursos, custoTotal);
+        ConsultaCustoReal custoReal = consultarCustoReal();
 
         return ResultadoAnalise.builder()
                 .totalRecursos(recursos.size())
                 .totalParadas(totalParadas)
                 .custoMensal(custoTotal)
+                .custoRealMensal(custoReal.valor())
+                .fonteCusto(custoReal.fonte())
+                .periodoCusto(custoReal.periodo())
+                .avisoCusto(custoReal.aviso())
                 .recomendacao(recomendacao)
                 .recursos(resumos)
                 .instancias(instanciasLegadas)
                 .build();
+    }
+
+    private ConsultaCustoReal consultarCustoReal() {
+        if (!costExplorerEnabled) {
+            return new ConsultaCustoReal(null, "Estimativa do inventário", null, null);
+        }
+
+        YearMonth mesAnterior = YearMonth.now().minusMonths(1);
+        LocalDate inicio = mesAnterior.atDay(1);
+        LocalDate fim = mesAnterior.plusMonths(1).atDay(1);
+        String periodo = mesAnterior.toString();
+
+        try (CostExplorerClient cliente = CostExplorerClient.builder()
+                .region(Region.of(costExplorerRegion))
+                .build()) {
+            GetCostAndUsageResponse resposta = cliente.getCostAndUsage(GetCostAndUsageRequest.builder()
+                    .timePeriod(DateInterval.builder()
+                            .start(inicio.toString())
+                            .end(fim.toString())
+                            .build())
+                    .granularity("MONTHLY")
+                    .metrics("UnblendedCost")
+                    .build());
+
+            if (resposta.resultsByTime().isEmpty()
+                    || resposta.resultsByTime().get(0).total().get("UnblendedCost") == null) {
+                return new ConsultaCustoReal(null, "Estimativa do inventário", periodo,
+                        "O Cost Explorer não retornou custo para " + periodo + ".");
+            }
+
+            BigDecimal valor = new BigDecimal(
+                    resposta.resultsByTime().get(0).total().get("UnblendedCost").amount())
+                    .setScale(2, RoundingMode.HALF_UP);
+            return new ConsultaCustoReal(valor, "AWS Cost Explorer", periodo, null);
+        } catch (RuntimeException e) {
+            return new ConsultaCustoReal(null, "Estimativa do inventário", periodo,
+                    "Não foi possível consultar o AWS Cost Explorer: " + e.getMessage());
+        }
+    }
+
+    private record ConsultaCustoReal(BigDecimal valor, String fonte, String periodo, String aviso) {
     }
 
     // --- Helpers ---

@@ -178,7 +178,17 @@ function renderizarResultado(dados) {
     document.getElementById('res-total-recursos').textContent =
         dados.totalRecursos ?? (dados.instancias?.length ?? 0);
     document.getElementById('res-total-paradas').textContent = dados.totalParadas ?? 0;
-    document.getElementById('res-custo-mensal').textContent = formatarUsd(dados.custoMensal);
+    const custoReal = dados.custoRealMensal;
+    const temCustoReal = custoReal !== null && custoReal !== undefined;
+    document.getElementById('res-custo-label').textContent =
+        temCustoReal ? 'Custo real mensal' : 'Custo mensal estimado';
+    document.getElementById('res-custo-mensal').textContent =
+        formatarUsd(temCustoReal ? custoReal : dados.custoMensal);
+    const fonte = dados.fonteCusto ?? 'Estimativa do inventário';
+    const periodo = dados.periodoCusto ? ` (${dados.periodoCusto})` : '';
+    const aviso = dados.avisoCusto ? ` ${dados.avisoCusto}` : '';
+    document.getElementById('res-fonte-custo').textContent =
+        `Fonte: ${fonte}${periodo}.${aviso}`;
 
     const recomendacao = dados.recomendacao ?? 'Sem recomendação.';
     document.getElementById('res-recomendacao').innerHTML = formatarMarkdown(recomendacao);
