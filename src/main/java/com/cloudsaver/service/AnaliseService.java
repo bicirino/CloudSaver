@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -23,16 +24,38 @@ import java.util.Map;
 public class AnaliseService {
 
     // Custo estimado por hora (USD) de cada tipo de instância EC2.
-    private static final Map<String, BigDecimal> PRECO_HORA = Map.of(
-        "t2.micro",   new BigDecimal("0.0116"),
-        "t3.micro",   new BigDecimal("0.0104"),
-        "t3.small",   new BigDecimal("0.0208"),
-        "t3.medium",  new BigDecimal("0.0416"),
-        "t3.large",   new BigDecimal("0.0832"),
-        "m5.large",   new BigDecimal("0.0960"),
-        "m5.xlarge",  new BigDecimal("0.1920"),
-        "c5.large",   new BigDecimal("0.0850"),
-        "r5.large",   new BigDecimal("0.1260")
+    private static final Map<String, BigDecimal> PRECO_HORA = Map.ofEntries(
+        Map.entry("t2.micro", new BigDecimal("0.0116")),
+        Map.entry("t2.small", new BigDecimal("0.0230")),
+        Map.entry("t2.medium", new BigDecimal("0.0464")),
+        Map.entry("t2.large", new BigDecimal("0.0928")),
+        Map.entry("t3.micro", new BigDecimal("0.0104")),
+        Map.entry("t3.small", new BigDecimal("0.0208")),
+        Map.entry("t3.medium", new BigDecimal("0.0416")),
+        Map.entry("t3.large", new BigDecimal("0.0832")),
+        Map.entry("t3.xlarge", new BigDecimal("0.1664")),
+        Map.entry("t3.2xlarge", new BigDecimal("0.3328")),
+        Map.entry("t4g.micro", new BigDecimal("0.0090")),
+        Map.entry("t4g.small", new BigDecimal("0.0180")),
+        Map.entry("t4g.medium", new BigDecimal("0.0360")),
+        Map.entry("t4g.large", new BigDecimal("0.0720")),
+        Map.entry("m5.large", new BigDecimal("0.0960")),
+        Map.entry("m5.xlarge", new BigDecimal("0.1920")),
+        Map.entry("m5.2xlarge", new BigDecimal("0.3840")),
+        Map.entry("m6g.large", new BigDecimal("0.1080")),
+        Map.entry("m6g.xlarge", new BigDecimal("0.2160")),
+        Map.entry("m6i.large", new BigDecimal("0.1150")),
+        Map.entry("m6i.xlarge", new BigDecimal("0.2300")),
+        Map.entry("m7g.large", new BigDecimal("0.1160")),
+        Map.entry("m7g.xlarge", new BigDecimal("0.2320")),
+        Map.entry("c5.large", new BigDecimal("0.0850")),
+        Map.entry("c5.xlarge", new BigDecimal("0.1700")),
+        Map.entry("c6g.large", new BigDecimal("0.0900")),
+        Map.entry("c6i.large", new BigDecimal("0.1020")),
+        Map.entry("r5.large", new BigDecimal("0.1260")),
+        Map.entry("r5.xlarge", new BigDecimal("0.2520")),
+        Map.entry("r6g.large", new BigDecimal("0.1440")),
+        Map.entry("r6i.large", new BigDecimal("0.1570"))
     );
 
     private static final BigDecimal HORAS_MES = new BigDecimal("730");
@@ -182,11 +205,16 @@ public class AnaliseService {
         if ("AWS".equals(servico)) {
             servicoRecurso = texto(item, "resourceType", texto(item, "resource_type", servico));
         }
-        String tipo = texto(item, "InstanceType", texto(item, "instanceType",
-                texto(item, "instance_type", texto(item, "DBInstanceClass",
-                        texto(item, "dbInstanceClass", texto(item, "VolumeType",
-                                texto(item, "volume_type", texto(item, "resourceType",
-                                        texto(item, "resource_type", texto(item, "type", servicoRecurso))))))))));
+        String tipo = textoQualquer(item,
+                "InstanceType", "instanceType", "instance_type",
+                "DBInstanceClass", "dbInstanceClass",
+                "VolumeType", "volume_type", "volumeType",
+                "Type", "type", "ResourceType", "resourceType",
+                "resource_type", "StorageType", "storage_type",
+                "Family", "family");
+        if (tipo == null || tipo.isBlank()) {
+            tipo = servicoRecurso;
+        }
         String estado = texto(item, "State", texto(item, "state",
                 texto(item, "StateName", texto(item, "status", "unknown"))));
         boolean ocioso = "stopped".equalsIgnoreCase(estado)
@@ -226,21 +254,37 @@ public class AnaliseService {
         return valor.asText(padrao);
     }
 
-    private BigDecimal valorDecimal(JsonNode node, String campo, BigDecimal padrao) {
-        JsonNode valor = node.get(campo);
-        if (valor != null && valor.isObject()) {
-            valor = valor.has("value") ? valor.get("value")
-                    : valor.has("amount") ? valor.get("amount")
-                    : valor.has("monthly") ? valor.get("monthly")
-                    : valor.has("monthlyCost") ? valor.get("monthlyCost") : null;
+    private String textoQualquer(JsonNode node, String... campos) {
+        for (String campo : campos) {
+            JsonNode valor = node.get(campo);
+            if (valor != null && !valor.isNull()) {
+                if (valor.isObject() && valor.has("Name")) {
+                    return valor.get("Name").asText();
+                }
+                return valor.asText();
+            }
         }
-        if (valor == null || !valor.isNumber() && !valor.isTextual()) {
+        return null;
+    }
+
+    private BigDecimal valorDecimal(JsonNode node, String campo, BigDecimal padrao) {
+        JsonNode valor = procurarCampo(node, campo);
+        if (valor == null) {
+            return padrao;
+        }
+        valor = resolverValorMonetario(valor);
+        if (valor == null || (!valor.isNumber() && !valor.isTextual())) {
             return padrao;
         }
         try {
-            String texto = valor.asText().trim()
-                    .replaceAll("(?i)usd|us\\$|\\$", "")
-                    .replace(" ", "");
+            String texto = valor.asText().trim();
+            if (texto.isBlank()) {
+                return padrao;
+            }
+            texto = texto.replaceAll("(?i)(?:usd|us\\$|\\$)", "")
+                    .replace(" ", "")
+                    .replace("(", "-")
+                    .replace(")", "");
             if (texto.contains(",") && texto.contains(".")) {
                 texto = texto.replace(",", "");
             } else if (texto.contains(",")) {
@@ -250,6 +294,58 @@ public class AnaliseService {
         } catch (NumberFormatException e) {
             return padrao;
         }
+    }
+
+    private JsonNode procurarCampo(JsonNode node, String campo) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (node.isObject()) {
+            JsonNode valor = node.get(campo);
+            if (valor != null) {
+                return valor;
+            }
+            Iterator<Map.Entry<String, JsonNode>> campos = node.fields();
+            while (campos.hasNext()) {
+                Map.Entry<String, JsonNode> entrada = campos.next();
+                JsonNode encontrado = procurarCampo(entrada.getValue(), campo);
+                if (encontrado != null) {
+                    return encontrado;
+                }
+            }
+        } else if (node.isArray()) {
+            for (JsonNode item : node) {
+                JsonNode encontrado = procurarCampo(item, campo);
+                if (encontrado != null) {
+                    return encontrado;
+                }
+            }
+        }
+        return null;
+    }
+
+    private JsonNode resolverValorMonetario(JsonNode valor) {
+        if (valor == null || valor.isNull()) {
+            return null;
+        }
+        if (valor.isObject()) {
+            JsonNode[] camposPrioritarios = {
+                    valor.get("value"), valor.get("amount"), valor.get("monthly"),
+                    valor.get("monthlyCost"), valor.get("usd"), valor.get("total"),
+                    valor.get("price"), valor.get("cost")
+            };
+            for (JsonNode candidato : camposPrioritarios) {
+                JsonNode resolvido = resolverValorMonetario(candidato);
+                if (resolvido != null) {
+                    return resolvido;
+                }
+            }
+            return null;
+        }
+        if (valor.isTextual() || valor.isNumber()) {
+            return valor;
+        }
+        return null;
     }
 
     private BigDecimal custoMensal(RecursoAws recurso) {
@@ -276,9 +372,23 @@ public class AnaliseService {
     }
 
     private BigDecimal custoMensal(String tipo) {
-        BigDecimal precoHora = (tipo != null)
-                ? PRECO_HORA.getOrDefault(tipo.toLowerCase(Locale.ROOT), PRECO_PADRAO)
-                : PRECO_PADRAO;
+        if (tipo == null || tipo.isBlank()) {
+            return PRECO_PADRAO.multiply(HORAS_MES).setScale(2, RoundingMode.HALF_UP);
+        }
+        String tipoNormalizado = tipo.toLowerCase(Locale.ROOT).trim();
+        BigDecimal precoHora = PRECO_HORA.get(tipoNormalizado);
+        if (precoHora == null) {
+            String base = tipoNormalizado.replace("db.", "").replace("*_", "");
+            for (Map.Entry<String, BigDecimal> entrada : PRECO_HORA.entrySet()) {
+                if (base.startsWith(entrada.getKey()) || tipoNormalizado.startsWith(entrada.getKey())) {
+                    precoHora = entrada.getValue();
+                    break;
+                }
+            }
+        }
+        if (precoHora == null) {
+            precoHora = PRECO_PADRAO;
+        }
         return precoHora.multiply(HORAS_MES).setScale(2, RoundingMode.HALF_UP);
     }
 

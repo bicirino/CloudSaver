@@ -211,4 +211,28 @@ class AnaliseServiceTest {
                 .containsExactly(new BigDecimal("121.18"), new BigDecimal("12.50"));
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("133.68"));
     }
+
+    @Test
+    void deveReconhecerTipoDeLoadBalancerEValorMonetarioAninhado() {
+        String inventario = """
+                {
+                  "loadBalancers": [
+                    {
+                      "LoadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-alb/123",
+                      "Type": "application",
+                      "State": "active",
+                      "cost": { "amount": { "usd": 19.75 } }
+                    }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getRecursos()).hasSize(1);
+        assertThat(resultado.getRecursos().get(0).getTipo()).isEqualTo("application");
+        assertThat(resultado.getRecursos().get(0).getCustoMensal()).isEqualByComparingTo(new BigDecimal("19.75"));
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("19.75"));
+    }
 }
