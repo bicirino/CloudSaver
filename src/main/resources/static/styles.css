@@ -1604,33 +1604,35 @@ code {
 }
 
 .grafico-fallback-barras {
-    display: flex;
-    align-items: end;
+    display: grid;
     gap: 8px;
-    height: 100%;
-    padding: 8px 4px 24px;
-    overflow-x: auto;
+    padding: 4px 0;
 }
 
 .grafico-fallback-coluna {
     display: flex;
-    min-width: 34px;
-    height: 100%;
-    flex-direction: column;
+    min-width: 0;
+    min-height: 20px;
+    flex-direction: row;
     align-items: center;
-    justify-content: end;
-    gap: 6px;
+    gap: 8px;
+    justify-content: start;
 }
 
-.grafico-fallback-barra {
-    width: 24px;
-    min-height: 2px;
+.grafico-fallback-coluna .grafico-fallback-barra {
+    order: 2;
+    height: 18px;
+    flex: 1 1 auto;
+    min-width: 2px;
+    max-width: calc(100% - 150px);
+    gap: 6px;
     border-radius: 5px 5px 0 0;
     background: var(--blue-soft);
 }
 
 .grafico-fallback-label {
-    max-width: 70px;
+    width: 142px;
+    flex: 0 0 142px;
     overflow: hidden;
     font-size: 10px;
     text-overflow: ellipsis;

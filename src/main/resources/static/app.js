@@ -38,6 +38,32 @@ function formatarUsd(valor) {
 
 let graficoCustosServico;
 let graficoCustosRecurso;
+const LIMITE_RECURSOS_GRAFICO = 12;
+
+function prepararDadosGraficoRecursos(recursos) {
+    const recursosComCusto = recursos
+        .map((recurso, indice) => ({
+            id: String(recurso.id ?? `Recurso ${indice + 1}`),
+            custo: Number(recurso.custoMensal),
+        }))
+        .filter((recurso) => Number.isFinite(recurso.custo) && recurso.custo >= 0)
+        .sort((a, b) => b.custo - a.custo);
+
+    const principais = recursosComCusto.slice(0, LIMITE_RECURSOS_GRAFICO);
+    const custoDemais = recursosComCusto
+        .slice(LIMITE_RECURSOS_GRAFICO)
+        .reduce((total, recurso) => total + recurso.custo, 0);
+
+    if (custoDemais > 0) {
+        principais.push({
+            id: 'Demais recursos',
+            custo: custoDemais,
+            quantidade: recursosComCusto.length - LIMITE_RECURSOS_GRAFICO,
+        });
+    }
+
+    return principais;
+}
 
 function criarElementoGrafico(tipo, classe, texto) {
     const elemento = document.createElement(tipo);
@@ -91,13 +117,15 @@ function renderizarGraficosFallback(recursos) {
     });
     areaPizza.replaceChildren(pizza, legenda);
 
-    const maiorCusto = Math.max(...recursosComCusto.map((recurso) => recurso.custo), 0);
+    const dadosGrafico = prepararDadosGraficoRecursos(recursos);
+    const maiorCusto = Math.max(...dadosGrafico.map((recurso) => recurso.custo), 0);
     const barras = criarElementoGrafico('div', 'grafico-fallback-barras');
-    recursosComCusto.forEach((recurso) => {
+    dadosGrafico.forEach((recurso) => {
         const coluna = criarElementoGrafico('div', 'grafico-fallback-coluna');
         const barra = criarElementoGrafico('div', 'grafico-fallback-barra');
-        barra.style.height = `${maiorCusto ? recurso.custo / maiorCusto * 100 : 0}%`;
-        barra.title = `${recurso.id}: ${formatarUsd(recurso.custo)}`;
+        barra.style.width = `${maiorCusto ? recurso.custo / maiorCusto * 100 : 0}%`;
+        barra.title = `${recurso.id}: ${formatarUsd(recurso.custo)}`
+            + (recurso.quantidade ? ` (${recurso.quantidade} recursos)` : '');
         coluna.append(barra, criarElementoGrafico('span', 'grafico-fallback-label', recurso.id));
         barras.appendChild(coluna);
     });
@@ -116,10 +144,7 @@ function renderizarGraficos(recursos) {
         graficoCustosRecurso?.destroy();
 
         const custosPorServico = new Map();
-        const labelsRecursos = [];
-        const custosRecursos = [];
-
-        recursos.forEach((recurso, indice) => {
+        recursos.forEach((recurso) => {
             const custo = Number(recurso.custoMensal);
             if (!Number.isFinite(custo) || custo < 0) {
                 return;
@@ -127,13 +152,14 @@ function renderizarGraficos(recursos) {
 
             const servico = String(recurso.servico ?? 'Outros');
             custosPorServico.set(servico, (custosPorServico.get(servico) ?? 0) + custo);
-            labelsRecursos.push(String(recurso.id ?? `Recurso ${indice + 1}`));
-            custosRecursos.push(custo);
         });
 
         const cores = ['#123b9c', '#f59e0b', '#23815e', '#a855f7', '#ef4444', '#0891b2', '#64748b'];
         const labelsServicos = [...custosPorServico.keys()];
         const valoresServicos = [...custosPorServico.values()];
+        const dadosGrafico = prepararDadosGraficoRecursos(recursos);
+        const labelsRecursos = dadosGrafico.map((recurso) => recurso.id);
+        const custosRecursos = dadosGrafico.map((recurso) => recurso.custo);
 
         graficoCustosServico = new Chart(document.getElementById('grafico-custos-servico'), {
         type: 'pie',
@@ -168,16 +194,34 @@ function renderizarGraficos(recursos) {
         },
         options: {
             maintainAspectRatio: false,
+            indexAxis: 'y',
             scales: {
                 y: {
+                    ticks: {
+                        autoSkip: false,
+                        callback: (valor) => labelsRecursos[valor]?.length > 32
+                            ? `${labelsRecursos[valor].slice(0, 29)}...`
+                            : labelsRecursos[valor],
+                    },
+                },
+                x: {
                     beginAtZero: true,
                     ticks: { callback: (valor) => formatarUsd(valor) },
                 },
-                x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
             },
             plugins: {
                 legend: { display: false },
-                tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => {
+                            const recurso = dadosGrafico[items[0].dataIndex];
+                            return recurso.quantidade
+                                ? `${recurso.id} (${recurso.quantidade} recursos)`
+                                : recurso.id;
+                        },
+                        label: (context) => ` ${formatarUsd(context.raw)}`,
+                    },
+                },
             },
         },
         });
