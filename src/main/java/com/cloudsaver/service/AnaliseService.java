@@ -298,7 +298,14 @@ public class AnaliseService {
             Map<String, Object> body = Map.of(
                     "model", groqModel,
                     "messages", List.of(
-                            Map.of("role", "system", "content", "Você é especialista em FinOps e AWS. Responda em português, de forma direta."),
+                            Map.of("role", "system", "content", """
+                                    Você é especialista em FinOps e AWS. Responda em português, de forma direta.
+                                    Use exclusivamente os fatos presentes no inventário fornecido.
+                                    Nunca invente métricas, custos, percentuais, economia, IDs ou características de recursos.
+                                    Só mencione uma métrica de utilização quando ela aparecer explicitamente nos dados.
+                                    Em especial, nunca mencione GPU, uso de GPU ou memória de GPU se não houver uma métrica de GPU explícita.
+                                    Quando uma métrica necessária não estiver disponível, diga claramente "não informado no inventário".
+                                    """),
                             Map.of("role", "user", "content", prompt)));
             Map<?, ?> response = restTemplate.postForObject(groqApiUrl,
                     new HttpEntity<>(body, headers), Map.class);
@@ -310,14 +317,26 @@ public class AnaliseService {
         }
     }
 
-    private String montarPrompt(List<RecursoAws> recursos, BigDecimal custoTotal) {
+    String montarPrompt(List<RecursoAws> recursos, BigDecimal custoTotal) {
         StringBuilder sb = new StringBuilder("Inventário AWS analisado:\n");
         sb.append("- Recursos: ").append(recursos.size())
                 .append("\n- Custo mensal estimado: US$ ").append(custoTotal).append("\n");
-        recursos.forEach(r -> sb.append("  * ").append(r.servico()).append(" ")
-                .append(r.id()).append(" (").append(r.tipo()).append(", ")
-                .append(r.estado()).append("): US$ ").append(custoMensal(r)).append("\n"));
+        recursos.forEach(r -> {
+            sb.append("  * ").append(r.servico()).append(" ")
+                    .append(r.id()).append(" (").append(r.tipo()).append(", ")
+                    .append(r.estado()).append("): US$ ").append(custoMensal(r)).append("\n");
+            adicionarMetricas(sb, r);
+        });
         sb.append("""
+
+                Regras obrigatórias para a análise:
+                - Baseie cada afirmação quantitativa em um valor acima; não faça suposições.
+                - Não trate ausência de métrica como valor baixo, alto ou zero.
+                - Não diga que um recurso está subutilizado apenas por estar parado ou disponível;
+                  diferencie estado operacional de utilização e deixe claro quando não houver métricas.
+                - Não mencione GPU sem um campo explícito de GPU no recurso. CPU e memória não são GPU.
+                - Não invente ações, economias ou prazos. Custos exibidos são estimativas e não representam
+                  necessariamente o valor faturado pela AWS.
 
                 Forneça a resposta em português, usando exatamente estas seções:
                 1. Avaliação do impacto financeiro
@@ -327,5 +346,30 @@ public class AnaliseService {
                 Na seção "Prioridade de ação", responda com uma tabela Markdown.
                 """);
         return sb.toString();
+    }
+
+    private void adicionarMetricas(StringBuilder prompt, RecursoAws recurso) {
+        JsonNode dados = recurso.dados();
+        if (dados == null || !dados.isObject()) {
+            return;
+        }
+        adicionarMetrica(prompt, dados, "CPU", "cpu_utilization_avg_percent",
+                "cpuUtilizationAvgPercent", "cpu_utilization_percent", "cpuUsagePercent");
+        adicionarMetrica(prompt, dados, "memória", "memory_utilization_avg_percent",
+                "memoryUtilizationAvgPercent", "memory_utilization_percent", "memoryUsagePercent");
+        adicionarMetrica(prompt, dados, "GPU", "gpu_utilization_avg_percent",
+                "gpuUtilizationAvgPercent", "gpu_utilization_percent", "gpuUsagePercent");
+    }
+
+    private void adicionarMetrica(StringBuilder prompt, JsonNode dados,
+                                  String nome, String... campos) {
+        for (String campo : campos) {
+            BigDecimal valor = valorDecimal(dados, campo, null);
+            if (valor != null) {
+                prompt.append("    - Métrica ").append(nome).append(" (")
+                        .append(campo).append("): ").append(valor).append("%\n");
+                return;
+            }
+        }
     }
 }

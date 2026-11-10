@@ -6,16 +6,20 @@ package com.cloudsaver.service;
 */
 
 import com.cloudsaver.dto.ResultadoAnalise;
+import com.cloudsaver.dto.RecursoAws;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AnaliseServiceTest {
 
     private final AnaliseService service = new AnaliseService();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Testando com JSON hardcoded para simular a entrada de dados de instâncias EC2
     private static final String JSON = """
@@ -210,5 +214,28 @@ class AnaliseServiceTest {
         assertThat(resultado.getRecursos()).extracting("custoMensal")
                 .containsExactly(new BigDecimal("121.18"), new BigDecimal("12.50"));
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("133.68"));
+    }
+
+    @Test
+    void promptDeveUsarSomenteMetricasPresentesNoInventario() throws Exception {
+        RecursoAws recurso = new RecursoAws(
+                "i-prod",
+                "EC2",
+                "t3.xlarge",
+                "running",
+                new BigDecimal("121.18"),
+                false,
+                objectMapper.readTree("""
+                        {
+                          "cpu_utilization_avg_percent": 1.1,
+                          "memory_utilization_avg_percent": 4.5
+                        }
+                        """));
+
+        String prompt = service.montarPrompt(List.of(recurso), new BigDecimal("121.18"));
+
+        assertThat(prompt).contains("Métrica CPU (cpu_utilization_avg_percent): 1.1%");
+        assertThat(prompt).contains("Métrica memória (memory_utilization_avg_percent): 4.5%");
+        assertThat(prompt).doesNotContain("Métrica GPU");
     }
 }
