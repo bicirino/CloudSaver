@@ -33,6 +33,23 @@ pipeline {
             }
         }
 
+        stage('Build Docker Image'){ 
+            steps{
+                echo 'Gerando imagem Docker...'
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+            }
+        }
+
+        stage('Trivy Verification'){ 
+            steps{ 
+                echo 'Fazendo verificação de vulnerabilidades com Trivy...'
+                sh """
+                    export PATH="$HOME/.local/bin:$PATH"
+
+                    trivy image --severity HIGH,CRITICAL --exit-code 1 --format table seu-usuario/sua-aplicacao:${env.BUILD_NUMBER}
+                """ 
+            }
+        }
     }
 
     post{ 
@@ -43,6 +60,9 @@ pipeline {
 
             // Guarda os arquivos .jar gerados no build para download posterior (artefatos de execução)
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+
+            // Remove a imagem Docker após a execução do pipeline - isso ajuda a economizar espaço em disco 
+            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true" 
             
             // Limpa o workspace do Jenkins após a execução do pipeline - isso ajuda a economizar espaço em disco 
             cleanWs() 
