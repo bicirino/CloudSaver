@@ -221,6 +221,20 @@ class AnaliseServiceTest {
     }
 
     @Test
+    void promptDeveRestringirEncerramentoARecursosOciosos() {
+        String prompt = service.montarPrompt(List.of(
+                new RecursoAws("i-running", "EC2", "t3.micro", "running",
+                        BigDecimal.ZERO, false, objectMapper.createObjectNode()),
+                new RecursoAws("i-stopped", "EC2", "t3.micro", "stopped",
+                        BigDecimal.ZERO, true, objectMapper.createObjectNode())
+        ), BigDecimal.ZERO);
+
+        assertThat(prompt).contains("i-running (t3.micro, running, ocioso: false)");
+        assertThat(prompt).contains("i-stopped (t3.micro, stopped, ocioso: true)");
+        assertThat(prompt).contains("Nunca recomende parar, excluir ou encerrar um recurso com \"ocioso: false\"");
+    }
+
+    @Test
     void deveInterpretarCustoMonetarioEValorAninhado() {
         String inventario = """
                 {

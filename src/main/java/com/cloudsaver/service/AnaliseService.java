@@ -344,6 +344,7 @@ public class AnaliseService {
                                     Só mencione uma métrica de utilização quando ela aparecer explicitamente nos dados.
                                     Em especial, nunca mencione GPU, uso de GPU ou memória de GPU se não houver uma métrica de GPU explícita.
                                     Quando uma métrica necessária não estiver disponível, diga claramente "não informado no inventário".
+                                    Quando o número de recursos ociosos for 0, parabenize pela otimização do ambiente e foque as recomendações apenas em boas práticas preventivas (como Reserved Instances/Savings Plans ou políticas de ciclo de vida no S3), sem sugerir a exclusão de recursos ativos em produção.
                                     """),
                             Map.of("role", "user", "content", prompt)));
             Map<?, ?> response = restTemplate.postForObject(groqApiUrl,
@@ -363,7 +364,8 @@ public class AnaliseService {
         recursos.forEach(r -> {
             sb.append("  * ").append(r.servico()).append(" ")
                     .append(r.id()).append(" (").append(r.tipo()).append(", ")
-                    .append(r.estado()).append("): US$ ").append(custoMensal(r)).append("\n");
+                    .append(r.estado()).append(", ocioso: ").append(r.ocioso())
+                    .append("): US$ ").append(custoMensal(r)).append("\n");
             adicionarMetricas(sb, r);
         });
         sb.append("""
@@ -373,6 +375,9 @@ public class AnaliseService {
                 - Não trate ausência de métrica como valor baixo, alto ou zero.
                 - Não diga que um recurso está subutilizado apenas por estar parado ou disponível;
                   diferencie estado operacional de utilização e deixe claro quando não houver métricas.
+                - Nunca recomende parar, excluir ou encerrar um recurso com "ocioso: false".
+                  Ações destrutivas só podem ser recomendadas para recursos explicitamente marcados
+                  como "ocioso: true", identificando o recurso pelo ID.
                 - Não mencione GPU sem um campo explícito de GPU no recurso. CPU e memória não são GPU.
                 - Não invente ações, economias ou prazos. Custos exibidos são estimativas e não representam
                   necessariamente o valor faturado pela AWS.
