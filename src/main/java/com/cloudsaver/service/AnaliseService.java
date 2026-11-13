@@ -7,8 +7,10 @@ import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -355,8 +357,18 @@ public class AnaliseService {
             Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
             return (String) message.get("content");
         } catch (Exception e) {
-            return "Falha ao chamar a Groq AI: " + e.getMessage();
+            return mensagemFalhaGroq(e);
         }
+    }
+
+    String mensagemFalhaGroq(Exception excecao) {
+        if (excecao instanceof HttpClientErrorException erro
+                && erro.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+            return "A IA está temporariamente indisponível por limite de requisições. "
+                    + "Tente novamente em alguns instantes.";
+        }
+        return "Não foi possível gerar a recomendação da IA neste momento. "
+                + "A análise dos recursos foi concluída; tente novamente mais tarde.";
     }
 
     String montarPrompt(List<RecursoAws> recursos, BigDecimal custoTotal) {

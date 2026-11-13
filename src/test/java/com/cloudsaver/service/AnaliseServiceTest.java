@@ -9,9 +9,13 @@ import com.cloudsaver.dto.ResultadoAnalise;
 import com.cloudsaver.dto.RecursoAws;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -302,5 +306,29 @@ class AnaliseServiceTest {
                 "file", "resources.json", "application/json", inventario.getBytes()));
 
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("730.00"));
+    }
+
+    @Test
+    void deveSanitizarErroDeLimiteDaGroq() {
+        HttpClientErrorException erro = HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                HttpHeaders.EMPTY,
+                "{\"error\":\"Rate limit reached\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8);
+
+        String mensagem = service.mensagemFalhaGroq(erro);
+
+        assertThat(mensagem).contains("limite de requisições");
+        assertThat(mensagem).doesNotContain("Rate limit", "api.groq.com", "tokens");
+    }
+
+    @Test
+    void deveSanitizarOutrosErrosDaGroq() {
+        String mensagem = service.mensagemFalhaGroq(
+                new IllegalStateException("resposta interna com URL e tokens"));
+
+        assertThat(mensagem).contains("Não foi possível gerar a recomendação");
+        assertThat(mensagem).doesNotContain("URL", "tokens", "resposta interna");
     }
 }
