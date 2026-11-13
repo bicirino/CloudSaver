@@ -2,6 +2,11 @@ pipeline {
 
     agent any 
     
+    environment{ 
+        IMAGE_NAME = 'gabcirino/cloudSaver' 
+        IMAGE_TAG = "${env.BUILD_NUMBER}" 
+    }
+
     tools{ 
         maven 'Maven-3.9'
     }
@@ -36,7 +41,9 @@ pipeline {
         stage('Build Docker Image'){ 
             steps{
                 echo 'Gerando imagem Docker...'
-                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh """"
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                """ 
             }
         }
 
