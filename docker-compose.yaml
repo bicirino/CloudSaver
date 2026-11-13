@@ -20,6 +20,9 @@ services:
 
   # Serviço do Jenkins, que será usado para CI/CD e automação de builds 
   jenkins: 
+    build:
+      context: . 
+      dockerfile: Dockerfile.jenkins
     # Usa uma imagem oficial do Jenkins com suporte a JDK 17
     image: jenkins/jenkins:2.516.3-lts-jdk17 
 
@@ -30,9 +33,13 @@ services:
     # Cria um volume persistente para guardar os dados do Jenkins - histórico, plugins, configurações, etc.
     volumes: 
       - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
 
     # Garante que o container reinicie automaticamente caso ele falhe até que seja parado manualmente
     restart: unless-stopped 
+
+    # Executa o container como root
+    user: root 
 
 # Declara e cria oficialmente o volume gerido pelo Docker 
 volumes: 

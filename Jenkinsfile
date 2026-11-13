@@ -3,7 +3,7 @@ pipeline {
     agent any 
     
     environment{ 
-        IMAGE_NAME = 'gabcirino/cloudSaver' 
+        IMAGE_NAME = 'gabcirino/cloudsaver' 
         IMAGE_TAG = "${env.BUILD_NUMBER}" 
     }
 
@@ -23,6 +23,12 @@ pipeline {
     }
 
     stages { 
+
+        stage('Checkout'){ 
+            steps{ 
+                git branch: 'main', url: 'https://github.com/bicirino/CloudSaver'
+            }
+        }
 
         stage ('Build'){ 
             steps{
@@ -51,9 +57,9 @@ pipeline {
             steps{ 
                 echo 'Fazendo verificação de vulnerabilidades com Trivy...'
                 sh """
-                    export PATH="$HOME/.local/bin:$PATH"
+                    export PATH="/var/jenkins_home/.local/bin:\$PATH"
 
-                    trivy image --severity HIGH,CRITICAL --exit-code 1 --format table seu-usuario/sua-aplicacao:${env.BUILD_NUMBER}
+                    trivy image --severity HIGH,CRITICAL --exit-code 1 --format table ${IMAGE_NAME}:${IMAGE_TAG}
                 """ 
             }
         }
