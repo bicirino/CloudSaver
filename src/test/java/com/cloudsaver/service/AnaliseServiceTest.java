@@ -322,4 +322,28 @@ class AnaliseServiceTest {
 
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("730.00"));
     }
+
+    @Test
+    void deveSanitizarErroDeLimiteDaGroq() {
+        HttpClientErrorException erro = HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                HttpHeaders.EMPTY,
+                "{\"error\":\"Rate limit reached\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8);
+
+        String mensagem = service.mensagemFalhaGroq(erro);
+
+        assertThat(mensagem).contains("limite de requisições");
+        assertThat(mensagem).doesNotContain("Rate limit", "api.groq.com", "tokens");
+    }
+
+    @Test
+    void deveSanitizarOutrosErrosDaGroq() {
+        String mensagem = service.mensagemFalhaGroq(
+                new IllegalStateException("resposta interna com URL e tokens"));
+
+        assertThat(mensagem).contains("Não foi possível gerar a recomendação");
+        assertThat(mensagem).doesNotContain("URL", "tokens", "resposta interna");
+    }
 }
