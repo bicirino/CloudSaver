@@ -905,7 +905,7 @@ code {
     width: 100%;
     min-width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
     font-size: 14px;
 }
 
@@ -915,12 +915,12 @@ code {
     border: 1px solid #f1d98a;
     text-align: left;
     vertical-align: top;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .markdown-table th,
 .markdown-table td.prioridade {
-    overflow-wrap: normal;
     white-space: nowrap;
 }
 

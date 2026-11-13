@@ -283,4 +283,24 @@ class AnaliseServiceTest {
         assertThat(prompt).contains("Métrica memória (memory_utilization_avg_percent): 4.5%");
         assertThat(prompt).doesNotContain("Métrica GPU");
     }
+
+    @Test
+    void deveCalcularCustoDeRdsR5DoisXlarge() {
+        String inventario = """
+                {
+                  "rdsInstances": [
+                    {
+                      "DBInstanceIdentifier": "qa-db",
+                      "DBInstanceClass": "db.r5.2xlarge",
+                      "DBInstanceStatus": "available"
+                    }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("730.00"));
+    }
 }
