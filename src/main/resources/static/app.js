@@ -247,10 +247,16 @@ function escaparHtml(texto) {
         .replaceAll("'", '&#039;');
 }
 
-function formatarCelulaMarkdown(texto) {
-    return escaparHtml(texto.trim())
+function formatarInlineMarkdown(texto) {
+    return escaparHtml(texto)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/__(.+?)__/g, '<strong>$1</strong>');
+        .replace(/__(.+?)__/g, '<strong>$1</strong>')
+        .replace(/(^|[^*\w])\*([^*\s](?:[^*]*[^*\s])?)\*(?![*\w])/g, '$1<em>$2</em>');
+}
+
+function formatarCelulaMarkdown(texto) {
+    return formatarInlineMarkdown(texto.trim());
 }
 
 function ehSeparadorDeTabela(linha) {
@@ -290,15 +296,19 @@ function formatarMarkdown(texto) {
         }
     };
 
-    const formatarLinha = (linha) => escaparHtml(linha)
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/__(.+?)__/g, '<strong>$1</strong>');
+    const formatarLinha = formatarInlineMarkdown;
 
     for (let indice = 0; indice < linhas.length; indice++) {
         const linha = linhas[indice];
         const conteudo = linha.trim();
         const itemNumerado = conteudo.match(/^\d+\.\s+(.+)$/);
         const itemMarcado = conteudo.match(/^[-*]\s+(.+)$/);
+
+        if (/^(-{3,}|\*{3,}|_{3,})$/.test(conteudo)) {
+            fecharLista();
+            html.push('<hr>');
+            continue;
+        }
 
         if (ehTituloPrioridade(conteudo)
             && linhas[indice + 2]

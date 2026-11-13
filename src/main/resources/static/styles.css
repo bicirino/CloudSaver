@@ -880,6 +880,21 @@ code {
     font-weight: 700;
 }
 
+.recomendacao-conteudo hr {
+    margin: 16px 0;
+    border: 0;
+    border-top: 1px solid #dfe1e6;
+}
+
+.recomendacao-conteudo code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #f4f5f7;
+    color: #172b4d;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.9em;
+}
+
 .markdown-table-wrap {
     margin: 14px 0;
     width: 100%;
@@ -901,6 +916,12 @@ code {
     text-align: left;
     vertical-align: top;
     overflow-wrap: anywhere;
+}
+
+.markdown-table th,
+.markdown-table td.prioridade {
+    overflow-wrap: normal;
+    white-space: nowrap;
 }
 
 .markdown-table th {

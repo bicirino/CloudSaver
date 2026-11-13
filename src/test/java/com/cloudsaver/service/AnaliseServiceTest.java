@@ -106,6 +106,37 @@ class AnaliseServiceTest {
     }
 
     @Test
+    void deveMapearEstadoDeRdsEElasticIpECustoDeM52xlarge() {
+        String inventario = """
+                {
+                  "ec2Instances": [
+                    { "InstanceId": "i-grande", "InstanceType": "m5.2xlarge", "State": { "Name": "running" } }
+                  ],
+                  "rdsInstances": [
+                    { "DBInstanceIdentifier": "prod-db", "DBInstanceClass": "db.t3.micro", "DBInstanceStatus": "available" },
+                    { "DBInstanceIdentifier": "old-db", "DBInstanceClass": "db.t3.micro", "DBInstanceStatus": "stopped" }
+                  ],
+                  "elasticIps": [
+                    { "AllocationId": "eipalloc-livre", "AssociationId": null },
+                    { "AllocationId": "eipalloc-usado", "AssociationId": "eipassoc-001" }
+                  ]
+                }
+                """;
+
+        ResultadoAnalise resultado = service.analisar(new MockMultipartFile(
+                "file", "resources.json", "application/json", inventario.getBytes()));
+
+        assertThat(resultado.getRecursos()).extracting("estado")
+                .containsExactly("running", "unassociated", "associated", "available", "stopped");
+        assertThat(resultado.getRecursos()).extracting("ocioso")
+                .containsExactly(false, true, false, false, true);
+        // IPv4 público é cobrado mesmo quando associado.
+        assertThat(resultado.getRecursos()).extracting("custoMensal")
+                .containsExactly(new BigDecimal("280.32"), new BigDecimal("3.65"), new BigDecimal("3.65"),
+                        new BigDecimal("12.41"), BigDecimal.ZERO);
+    }
+
+    @Test
     void deveIgnorarEnvelopesDeColecaoSemRecursos() {
         String inventario = """
                 {

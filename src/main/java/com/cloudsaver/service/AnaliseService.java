@@ -22,17 +22,41 @@ import java.util.Map;
 @Service
 public class AnaliseService {
 
-    // Custo estimado por hora (USD) de cada tipo de instância EC2.
-    private static final Map<String, BigDecimal> PRECO_HORA = Map.of(
-        "t2.micro",   new BigDecimal("0.0116"),
-        "t3.micro",   new BigDecimal("0.0104"),
-        "t3.small",   new BigDecimal("0.0208"),
-        "t3.medium",  new BigDecimal("0.0416"),
-        "t3.large",   new BigDecimal("0.0832"),
-        "m5.large",   new BigDecimal("0.0960"),
-        "m5.xlarge",  new BigDecimal("0.1920"),
-        "c5.large",   new BigDecimal("0.0850"),
-        "r5.large",   new BigDecimal("0.1260")
+    // Custo estimado por hora (USD, on-demand Linux, us-east-1) de cada tipo de instância EC2.
+    private static final Map<String, BigDecimal> PRECO_HORA = Map.ofEntries(
+        Map.entry("t2.micro",   new BigDecimal("0.0116")),
+        Map.entry("t2.small",   new BigDecimal("0.0230")),
+        Map.entry("t2.medium",  new BigDecimal("0.0464")),
+        Map.entry("t3.nano",    new BigDecimal("0.0052")),
+        Map.entry("t3.micro",   new BigDecimal("0.0104")),
+        Map.entry("t3.small",   new BigDecimal("0.0208")),
+        Map.entry("t3.medium",  new BigDecimal("0.0416")),
+        Map.entry("t3.large",   new BigDecimal("0.0832")),
+        Map.entry("t3.xlarge",  new BigDecimal("0.1664")),
+        Map.entry("t3.2xlarge", new BigDecimal("0.3328")),
+        Map.entry("m5.large",   new BigDecimal("0.0960")),
+        Map.entry("m5.xlarge",  new BigDecimal("0.1920")),
+        Map.entry("m5.2xlarge", new BigDecimal("0.3840")),
+        Map.entry("m5.4xlarge", new BigDecimal("0.7680")),
+        Map.entry("c5.large",   new BigDecimal("0.0850")),
+        Map.entry("c5.xlarge",  new BigDecimal("0.1700")),
+        Map.entry("c5.2xlarge", new BigDecimal("0.3400")),
+        Map.entry("r5.large",   new BigDecimal("0.1260")),
+        Map.entry("r5.xlarge",  new BigDecimal("0.2520")),
+        Map.entry("r5.2xlarge", new BigDecimal("0.5040"))
+    );
+
+    // Custo estimado por hora (USD, on-demand MySQL Single-AZ, us-east-1) de cada classe RDS.
+    private static final Map<String, BigDecimal> PRECO_HORA_RDS = Map.of(
+        "db.t3.micro",   new BigDecimal("0.017"),
+        "db.t3.small",   new BigDecimal("0.034"),
+        "db.t3.medium",  new BigDecimal("0.068"),
+        "db.t3.large",   new BigDecimal("0.136"),
+        "db.m5.large",   new BigDecimal("0.171"),
+        "db.m5.xlarge",  new BigDecimal("0.342"),
+        "db.m5.2xlarge", new BigDecimal("0.684"),
+        "db.r5.large",   new BigDecimal("0.250"),
+        "db.r5.xlarge",  new BigDecimal("0.500")
     );
 
     private static final BigDecimal HORAS_MES = new BigDecimal("730");
@@ -188,12 +212,18 @@ public class AnaliseService {
                                 texto(item, "volume_type", texto(item, "resourceType",
                                         texto(item, "resource_type", texto(item, "type", servicoRecurso))))))))));
         String estado = texto(item, "State", texto(item, "state",
-                texto(item, "StateName", texto(item, "status", "unknown"))));
+                texto(item, "StateName", texto(item, "DBInstanceStatus",
+                        texto(item, "status", "unknown")))));
+        boolean eipSemAssociacao = "Elastic IP".equals(servico) && !item.hasNonNull("AssociationId");
+        if ("Elastic IP".equals(servico) && "unknown".equals(estado)) {
+            estado = eipSemAssociacao ? "unassociated" : "associated";
+        }
+        // "available" só indica ociosidade em volumes EBS; em RDS e NAT Gateway significa "em uso".
         boolean ocioso = "stopped".equalsIgnoreCase(estado)
-                || "available".equalsIgnoreCase(estado)
+                || ("available".equalsIgnoreCase(estado) && "EBS".equals(servicoRecurso))
                 || "unassociated".equalsIgnoreCase(estado)
                 || "unused".equalsIgnoreCase(estado)
-                || ("Elastic IP".equals(servico) && !item.hasNonNull("AssociationId"));
+                || eipSemAssociacao;
         recursos.add(new RecursoAws(id, servicoRecurso, tipo, estado,
                 custoInformado(item),
                 ocioso, item));
@@ -267,6 +297,8 @@ public class AnaliseService {
             case "Elastic IP" -> custoPorHora(IPV4_HORA);
             case "NAT Gateway" -> custoPorHora(NAT_GATEWAY_HORA);
             case "Load Balancer" -> custoPorHora(LOAD_BALANCER_HORA);
+            case "RDS" -> "available".equalsIgnoreCase(recurso.estado())
+                    ? custoMensalRds(recurso.tipo()) : BigDecimal.ZERO;
             default -> BigDecimal.ZERO;
         };
     }
@@ -280,6 +312,13 @@ public class AnaliseService {
                 ? PRECO_HORA.getOrDefault(tipo.toLowerCase(Locale.ROOT), PRECO_PADRAO)
                 : PRECO_PADRAO;
         return precoHora.multiply(HORAS_MES).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal custoMensalRds(String classe) {
+        BigDecimal precoHora = (classe != null)
+                ? PRECO_HORA_RDS.get(classe.toLowerCase(Locale.ROOT))
+                : null;
+        return precoHora != null ? custoPorHora(precoHora) : BigDecimal.ZERO;
     }
 
     private String gerarRecomendacao(List<RecursoAws> recursos, BigDecimal custoTotal) {
