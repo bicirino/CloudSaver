@@ -329,6 +329,8 @@ function formatarMarkdown(texto) {
             && ehSeparadorDeTabela(linhas[indice + 1])) {
             fecharLista();
             const cabecalho = separarCelulasTabela(conteudo);
+            const indicePrioridade = cabecalho.findIndex((celula) =>
+                celula.trim().toLowerCase() === 'prioridade');
             const linhasTabela = [];
             let indiceLinha = indice + 2;
 
@@ -346,7 +348,7 @@ function formatarMarkdown(texto) {
                 html.push('<tr>');
                 cabecalho.forEach((_, indiceCelula) => {
                     const celula = celulas[indiceCelula] ?? '';
-                    const classePrioridade = indiceCelula === 1
+                    const classePrioridade = indiceCelula === indicePrioridade
                         ? ` class="prioridade prioridade--${celula.trim().toLowerCase()}"`
                         : '';
                     html.push(`<td${classePrioridade}>${formatarCelulaMarkdown(celula)}</td>`);

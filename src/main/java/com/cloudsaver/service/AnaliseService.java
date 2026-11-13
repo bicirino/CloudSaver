@@ -9,6 +9,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -355,8 +356,18 @@ public class AnaliseService {
             Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
             return (String) message.get("content");
         } catch (Exception e) {
-            return "Falha ao chamar a Groq AI: " + e.getMessage();
+            return mensagemFalhaGroq(e);
         }
+    }
+
+    String mensagemFalhaGroq(Exception excecao) {
+        if (excecao instanceof HttpStatusCodeException erro
+                && erro.getStatusCode().value() == 429) {
+            return "A recomendação está temporariamente indisponível porque o limite "
+                    + "de uso da IA foi atingido. Tente novamente em alguns instantes.";
+        }
+        return "Não foi possível gerar a recomendação da IA agora. "
+                + "A análise dos recursos foi concluída; tente novamente mais tarde.";
     }
 
     String montarPrompt(List<RecursoAws> recursos, BigDecimal custoTotal) {

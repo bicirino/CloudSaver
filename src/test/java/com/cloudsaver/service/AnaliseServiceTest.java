@@ -9,9 +9,13 @@ import com.cloudsaver.dto.ResultadoAnalise;
 import com.cloudsaver.dto.RecursoAws;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -282,6 +286,21 @@ class AnaliseServiceTest {
         assertThat(prompt).contains("Métrica CPU (cpu_utilization_avg_percent): 1.1%");
         assertThat(prompt).contains("Métrica memória (memory_utilization_avg_percent): 4.5%");
         assertThat(prompt).doesNotContain("Métrica GPU");
+    }
+
+    @Test
+    void deveSanitizarLimiteDeUsoDaGroq() {
+        HttpClientErrorException erro = HttpClientErrorException.create(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Too Many Requests",
+                HttpHeaders.EMPTY,
+                "{\"error\":\"Rate limit reached\"}".getBytes(StandardCharsets.UTF_8),
+                StandardCharsets.UTF_8);
+
+        String mensagem = service.mensagemFalhaGroq(erro);
+
+        assertThat(mensagem).contains("limite de uso da IA");
+        assertThat(mensagem).doesNotContain("api.groq.com", "Rate limit", "tokens");
     }
 
     @Test
