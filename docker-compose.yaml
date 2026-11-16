@@ -25,10 +25,8 @@ services:
     # Garante que o container reinicie automaticamente caso ele falhe até que seja parado manualmente
     restart: unless-stopped    
 
-  # Jenkins apenas para CI local — NÃO publicar em produção.
-  # Porta 8081 só em localhost; sem docker.sock (use agente dedicado em produção).
+  # Jenkins para CI local. Porta 8081 só em localhost; sem docker.sock por padrão.
   jenkins: 
-    profiles: ["ci"]
     build:
       context: . 
       dockerfile: Dockerfile.jenkins
