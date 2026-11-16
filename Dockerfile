@@ -24,8 +24,15 @@ FROM eclipse-temurin:17-jre
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
 
+# Usuário não-root
+RUN groupadd --system cloudsaver \
+    && useradd --system --gid cloudsaver --home-dir /app --shell /usr/sbin/nologin cloudsaver
+
 # Ele copia apenas o arquivo .jar gerado na etapa anterior e o renomeia para app.jar
 COPY --from=builder /app/target/*.jar app.jar
+RUN chown cloudsaver:cloudsaver /app/app.jar
+
+USER cloudsaver
 
 # A porta que o container expõe será a 8080, que é a porta padrão para aplicações web
 EXPOSE 8080

@@ -6,10 +6,12 @@
     <title>CloudSaver | Analisar estrutura</title>
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+            integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
+            crossorigin="anonymous"></script>
 </head>
 <body class="app-page">
-    <header class="topbar"><a class="brand" href="index.html">CloudSaver</a><span class="connection-status"><span aria-hidden="true">●</span> Análise segura</span></header>
+    <header class="topbar"><a class="brand" href="index.html">CloudSaver</a><span class="connection-status"><span aria-hidden="true">●</span> Cálculo local + IA opcional</span></header>
     <div class="app-shell">
         <aside class="app-sidebar" aria-label="Menu principal">
             <p class="sidebar-label">Navegação</p>
@@ -18,15 +20,27 @@
                 <a class="side-nav-link" href="gerar-json.html"><i class="fi fi-rr-file-code" aria-hidden="true"></i> Como gerar JSON</a>
                 <a class="side-nav-link is-active" href="analise.html"><i class="fi fi-rr-search" aria-hidden="true"></i> Analisar estrutura</a>
             </nav>
-            <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Dados processados localmente</span></div>
+            <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Custos locais; IA só com consentimento</span></div>
         </aside>
         <main class="dashboard">
-            <header class="page-header"><p class="breadcrumb">CloudSaver <span aria-hidden="true">/</span> Analisar estrutura</p><p class="eyebrow">Passo 2</p><h1>Analisar estrutura</h1><p class="intro">Selecione o inventário JSON para ver o custo mensal estimado de todos os recursos suportados e as recomendações.</p></header>
+            <header class="page-header"><p class="breadcrumb">CloudSaver <span aria-hidden="true">/</span> Analisar estrutura</p><p class="eyebrow">Passo 2</p><h1>Analisar estrutura</h1><p class="intro">Selecione o inventário JSON para ver o custo mensal estimado. O cálculo ocorre no servidor; a recomendação por IA (Groq) só é gerada se você autorizar o envio de um resumo sanitizado.</p></header>
             <section class="content-section card analise" aria-labelledby="titulo-analise">
                 <div class="section-heading"><div><p class="section-kicker">Enviar arquivo</p><h2 id="titulo-analise" class="card-title">Comece sua análise</h2></div><span class="step-badge">Passo 2 de 2</span></div>
-                <form id="form-analise" class="upload-form"><div class="file-field"><label for="arquivo-json">Arquivo JSON</label><input type="file" id="arquivo-json" name="file" accept=".json,application/json" required><p id="nome-arquivo" class="file-name" aria-live="polite">Nenhum arquivo selecionado</p></div><button type="submit" class="btn btn-primary" id="btn-analisar">Executar análise</button></form>
+                <form id="form-analise" class="upload-form">
+                    <div class="file-field">
+                        <label for="arquivo-json">Arquivo JSON</label>
+                        <input type="file" id="arquivo-json" name="file" accept=".json,application/json" required>
+                        <p id="nome-arquivo" class="file-name" aria-live="polite">Nenhum arquivo selecionado</p>
+                    </div>
+                    <label class="consentimento-ia" for="usar-ia">
+                        <input type="checkbox" id="usar-ia" name="usarIa" value="true">
+                        <span>Autorizo enviar um resumo sanitizado do inventário à Groq para gerar recomendação por IA (opcional). Sem esta opção, a análise permanece apenas local.</span>
+                    </label>
+                    <p class="aviso-privacidade">Inventários AWS podem conter identificadores sensíveis. O arquivo não é persistido em banco; limite de upload: 100 KB.</p>
+                    <button type="submit" class="btn btn-primary" id="btn-analisar">Executar análise</button>
+                </form>
                 <p id="analise-erro" class="analise-erro" hidden role="alert"></p><p id="analise-carregando" class="analise-loading" hidden><span class="spinner" aria-hidden="true"></span> Analisando…</p>
-                <div id="resultado-analise" class="resultado" hidden><h3 class="resultado-title">Resultado da análise</h3><div class="metrics"><article class="metric"><p class="metric-label">Recursos analisados</p><p class="metric-value" id="res-total-recursos">—</p></article><article class="metric"><p class="metric-label">Potencialmente ociosos</p><p class="metric-value" id="res-total-paradas">—</p></article><article class="metric"><p class="metric-label">Custo mensal estimado</p><p class="metric-value metric-value--accent" id="res-custo-mensal">—</p></article></div><div class="recomendacao"><h4>Recomendação (IA)</h4><div id="res-recomendacao" class="recomendacao-conteudo"></div></div><section class="graficos-custos" aria-labelledby="titulo-graficos"><h4 id="titulo-graficos">Distribuição dos custos</h4><div class="graficos-grid"><div class="grafico-card"><h5>Custo por serviço</h5><div class="grafico-area grafico-area--pizza"><canvas id="grafico-custos-servico" aria-label="Gráfico de pizza com o custo por serviço"></canvas></div></div><div class="grafico-card"><h5>Custo por recurso</h5><div class="grafico-area"><canvas id="grafico-custos-recurso" aria-label="Gráfico de colunas com o custo por recurso"></canvas></div></div></div></section><div class="table-wrap"><h4>Recursos encontrados</h4><table class="data-table"><thead><tr><th>Recurso</th><th>Serviço</th><th>Tipo / estado</th><th>Custo mensal</th></tr></thead><tbody id="res-tabela-recursos"></tbody></table></div></div>
+                <div id="resultado-analise" class="resultado" hidden><h3 class="resultado-title">Resultado da análise</h3><div class="metrics"><article class="metric"><p class="metric-label">Recursos analisados</p><p class="metric-value" id="res-total-recursos">—</p></article><article class="metric"><p class="metric-label">Potencialmente ociosos</p><p class="metric-value" id="res-total-paradas">—</p></article><article class="metric"><p class="metric-label">Custo mensal estimado</p><p class="metric-value metric-value--accent" id="res-custo-mensal">—</p></article></div><div class="recomendacao"><h4>Recomendação</h4><div id="res-recomendacao" class="recomendacao-conteudo"></div></div><section class="graficos-custos" aria-labelledby="titulo-graficos"><h4 id="titulo-graficos">Distribuição dos custos</h4><div class="graficos-grid"><div class="grafico-card"><h5>Custo por serviço</h5><div class="grafico-area grafico-area--pizza"><canvas id="grafico-custos-servico" aria-label="Gráfico de pizza com o custo por serviço"></canvas></div></div><div class="grafico-card"><h5>Custo por recurso</h5><div class="grafico-area"><canvas id="grafico-custos-recurso" aria-label="Gráfico de colunas com o custo por recurso"></canvas></div></div></div></section><div class="table-wrap"><h4>Recursos encontrados</h4><table class="data-table"><thead><tr><th>Recurso</th><th>Serviço</th><th>Tipo / estado</th><th>Custo mensal</th></tr></thead><tbody id="res-tabela-recursos"></tbody></table></div></div>
             </section>
             <div class="page-actions"><a class="text-link" href="gerar-json.html">← Voltar para Como gerar JSON</a></div>
         </main>

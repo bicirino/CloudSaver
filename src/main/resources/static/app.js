@@ -275,12 +275,22 @@ function ehTituloPrioridade(linha) {
     return linha.replace(/[*_:#]/g, '').trim().toLowerCase() === 'prioridade de ação';
 }
 
+function classePrioridadeSegura(texto) {
+    const valor = String(texto ?? '').trim().toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    if (valor === 'alta') return 'prioridade prioridade--alta';
+    if (valor === 'media') return 'prioridade prioridade--media';
+    if (valor === 'baixa') return 'prioridade prioridade--baixa';
+    return 'prioridade';
+}
+
 function renderizarTabelaPrioridade(acao, prioridade, justificativa) {
     return `<div class="markdown-table-wrap"><table class="markdown-table">
         <thead><tr><th scope="col">Ação</th><th scope="col">Prioridade</th><th scope="col">Por quê</th></tr></thead>
         <tbody><tr>
             <td>${formatarCelulaMarkdown(acao)}</td>
-            <td class="prioridade prioridade--${prioridade.toLowerCase()}">${formatarCelulaMarkdown(prioridade)}</td>
+            <td class="${classePrioridadeSegura(prioridade)}">${formatarCelulaMarkdown(prioridade)}</td>
             <td>${formatarCelulaMarkdown(justificativa)}</td>
         </tr></tbody>
     </table></div>`;
@@ -351,7 +361,7 @@ function formatarMarkdown(texto) {
                 cabecalho.forEach((_, indiceCelula) => {
                     const celula = celulas[indiceCelula] ?? '';
                     const classePrioridade = indiceCelula === indicePrioridade
-                        ? ` class="prioridade prioridade--${celula.trim().toLowerCase()}"`
+                        ? ` class="${classePrioridadeSegura(celula)}"`
                         : '';
                     html.push(`<td${classePrioridade}>${formatarCelulaMarkdown(celula)}</td>`);
                 });
@@ -443,6 +453,14 @@ async function enviarAnalise(event) {
 
     const formData = new FormData();
     formData.append('file', arquivo);
+    const usarIa = document.getElementById('usar-ia')?.checked === true;
+    formData.append('usarIa', usarIa ? 'true' : 'false');
+
+    const headers = {};
+    const apiKey = window.CLOUDSAVER_API_KEY || localStorage.getItem('cloudsaverApiKey') || '';
+    if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+    }
 
     btn.disabled = true;
     carregando.hidden = false;
@@ -450,6 +468,7 @@ async function enviarAnalise(event) {
     try {
         const resposta = await fetch('/api/analise', {
             method: 'POST',
+            headers,
             body: formData,
         });
 

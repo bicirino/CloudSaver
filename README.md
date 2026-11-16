@@ -14,6 +14,8 @@ Plataforma Cloud-Native para identificação automatizada de recursos ociosos na
 
 > A versão atual analisa um inventário JSON enviado pelo usuário. Ela calcula o custo estimado de todos os recursos suportados, e não somente de instâncias EC2 paradas.
 
+**Segurança:** veja [SECURITY.md](SECURITY.md). Em produção use TLS na borda, `CLOUDSAVER_REQUIRE_API_KEY=true`, e deixe a recomendação por IA como opt-in (`usarIa`).
+
 
 ## 📌 1. Visão Geral do Projeto
 

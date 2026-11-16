@@ -44,6 +44,13 @@ pipeline {
             }
         }
 
+        stage('Dependency Check'){
+            steps{
+                echo 'Verificando CVEs de dependências (OWASP)...'
+                sh 'mvn -q org.owasp:dependency-check-maven:check || true'
+            }
+        }
+
         stage('Build Docker Image'){ 
             steps{
                 echo 'Gerando imagem Docker...'

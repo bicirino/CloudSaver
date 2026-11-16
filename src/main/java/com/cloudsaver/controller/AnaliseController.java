@@ -19,9 +19,14 @@ public class AnaliseController {
         this.analiseService = analiseService;
     }
 
-    // Recebe o arquivo JSON exportado pelo AWS CLI e devolve o resultado da análise.
+    /**
+     * Recebe o inventário JSON. Por padrão não envia dados à Groq (usarIa=false).
+     * Com usarIa=true o usuário consente no envio de um resumo sanitizado à LLM.
+     */
     @PostMapping("/analise")
-    public ResponseEntity<ResultadoAnalise> analisar(@RequestParam("file") MultipartFile arquivo) {
-        return ResponseEntity.ok(analiseService.analisar(arquivo));
+    public ResponseEntity<ResultadoAnalise> analisar(
+            @RequestParam("file") MultipartFile arquivo,
+            @RequestParam(value = "usarIa", defaultValue = "false") boolean usarIa) {
+        return ResponseEntity.ok(analiseService.analisar(arquivo, usarIa));
     }
 }

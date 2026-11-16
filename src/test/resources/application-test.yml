@@ -1,0 +1,9 @@
+cloudsaver:
+  security:
+    require-api-key: false
+    rate-limit-por-cliente: 0
+
+groq:
+  api:
+    key:
+    url: https://api.groq.com/openai/v1/chat/completions

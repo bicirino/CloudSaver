@@ -1,5 +1,8 @@
 server:
   port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
 
 spring:
   application:
@@ -10,6 +13,28 @@ spring:
     multipart:
       max-file-size: 100KB
       max-request-size: 100KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+  info:
+    env:
+      enabled: false
+
+cloudsaver:
+  security:
+    # Em produção: defina CLOUDSAVER_API_KEY e CLOUDSAVER_REQUIRE_API_KEY=true
+    api-key: ${CLOUDSAVER_API_KEY:}
+    require-api-key: ${CLOUDSAVER_REQUIRE_API_KEY:false}
+    rate-limit-por-cliente: ${CLOUDSAVER_RATE_LIMIT_POR_CLIENTE:20}
+    rate-limit-janela-minutos: ${CLOUDSAVER_RATE_LIMIT_JANELA_MINUTOS:60}
+  analise:
+    max-recursos: ${CLOUDSAVER_ANALISE_MAX_RECURSOS:500}
 
 groq:
   api:
