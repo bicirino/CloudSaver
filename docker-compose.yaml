@@ -25,7 +25,8 @@ services:
     # Garante que o container reinicie automaticamente caso ele falhe até que seja parado manualmente
     restart: unless-stopped    
 
-  # Jenkins para CI local. Porta 8081 só em localhost; sem docker.sock por padrão.
+  # Jenkins para CI local. Porta 8081 só em localhost.
+  # docker.sock é necessário para o stage "Build Docker Image" do Jenkinsfile.
   jenkins: 
     build:
       context: . 
@@ -35,10 +36,9 @@ services:
       - "127.0.0.1:8081:8080"
     volumes: 
       - jenkins_home:/var/jenkins_home
-      # docker.sock removido por padrão — anexar só em ambiente controlado de CI
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped 
-    # Evita root; ajuste UID conforme a imagem Jenkins
-    user: "1000:1000"
+    user: root
 
 # Declara e cria oficialmente o volume gerido pelo Docker 
 volumes: 
