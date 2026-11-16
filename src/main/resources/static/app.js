@@ -39,7 +39,8 @@ function formatarUsd(valor) {
 let graficoCustosServico;
 let graficoCustosRecurso;
 const LIMITE_RECURSOS_GRAFICO = 12;
-const LIMITE_TAMANHO_ARQUIVO_BYTES = 128 * 1024;
+const LIMITE_TAMANHO_ARQUIVO_KB = 100;
+const LIMITE_TAMANHO_ARQUIVO_BYTES = LIMITE_TAMANHO_ARQUIVO_KB * 1024;
 
 function prepararDadosGraficoRecursos(recursos) {
     const recursosComCusto = recursos
@@ -435,7 +436,7 @@ async function enviarAnalise(event) {
     if (arquivo.size > LIMITE_TAMANHO_ARQUIVO_BYTES) {
         mostrarErroAnalise(
             `Arquivo grande demais (${Math.ceil(arquivo.size / 1024)} KB). `
-                + 'Inventários típicos têm cerca de 3 KB; o limite é 128 KB.'
+                + `Inventários típicos têm cerca de 3 KB; o limite é ${LIMITE_TAMANHO_ARQUIVO_KB} KB.`
         );
         return;
     }

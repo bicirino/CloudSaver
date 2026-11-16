@@ -90,8 +90,9 @@ public class AnaliseService {
     @Value("${groq.prompt.janela-minutos:60}")
     private int janelaMinutosPrompt = 60;
 
-    @Value("${cloudsaver.analise.tamanho-max-kb:128}")
-    private int tamanhoMaximoArquivoKb = 128;
+    static final int TAMANHO_MAXIMO_ARQUIVO_KB = 100;
+
+    private int tamanhoMaximoArquivoKb = TAMANHO_MAXIMO_ARQUIVO_KB;
 
     private static final int KIBIBYTE = 1024;
 

@@ -245,7 +245,7 @@ class AnaliseServiceTest {
 
     @Test
     void deveAceitarArquivoDentroDoLimiteDeTamanho() {
-        ReflectionTestUtils.setField(service, "tamanhoMaximoArquivoKb", 128);
+        ReflectionTestUtils.setField(service, "tamanhoMaximoArquivoKb", 100);
         MockMultipartFile arquivo = new MockMultipartFile(
                 "file", "ok.json", "application/json", "{\"resources\":[]}".getBytes());
 
