@@ -6,6 +6,15 @@ spring:
     name: cloudsaver
   config:
     import: optional:file:.env[.properties]
+  servlet:
+    multipart:
+      max-file-size: ${CLOUDSAVER_UPLOAD_MAX_FILE:128KB}
+      max-request-size: ${CLOUDSAVER_UPLOAD_MAX_FILE:128KB}
+
+cloudsaver:
+  analise:
+    # Inventários típicos ~3 KB; acima disso aumenta custo/risco na IA.
+    tamanho-max-kb: ${CLOUDSAVER_ANALISE_TAMANHO_MAX_KB:128}
 
 groq:
   api:

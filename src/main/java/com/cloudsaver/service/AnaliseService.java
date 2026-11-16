@@ -90,6 +90,11 @@ public class AnaliseService {
     @Value("${groq.prompt.janela-minutos:60}")
     private int janelaMinutosPrompt = 60;
 
+    @Value("${cloudsaver.analise.tamanho-max-kb:128}")
+    private int tamanhoMaximoArquivoKb = 128;
+
+    private static final int KIBIBYTE = 1024;
+
     private final Object limitePromptLock = new Object();
     private final Deque<Long> requisicoesPrompt = new ArrayDeque<>();
 
@@ -97,6 +102,7 @@ public class AnaliseService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public ResultadoAnalise analisar(MultipartFile arquivo) {
+        validarArquivoInventario(arquivo);
         List<RecursoAws> recursos = lerRecursos(arquivo);
         List<ResultadoAnalise.RecursoResumo> resumos = new ArrayList<>();
         List<ResultadoAnalise.InstanciaResumo> instanciasLegadas = new ArrayList<>();
@@ -137,10 +143,37 @@ public class AnaliseService {
 
     // --- Helpers ---
 
-    private List<RecursoAws> lerRecursos(MultipartFile arquivo) {
-        if (arquivo.isEmpty()) {
+    void validarArquivoInventario(MultipartFile arquivo) {
+        if (arquivo == null || arquivo.isEmpty()) {
             throw new IllegalArgumentException("O arquivo está vazio.");
         }
+        long tamanho = arquivo.getSize();
+        if (tamanho < 0) {
+            try {
+                tamanho = arquivo.getBytes().length;
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Não foi possível ler o tamanho do arquivo.", e);
+            }
+        }
+        long limiteBytes = (long) Math.max(1, tamanhoMaximoArquivoKb) * KIBIBYTE;
+        if (tamanho > limiteBytes) {
+            throw new IllegalArgumentException(
+                    "Arquivo grande demais (" + formatarTamanhoAproximado(tamanho)
+                            + "). Inventários típicos têm cerca de 3 KB; o limite atual é "
+                            + tamanhoMaximoArquivoKb + " KB. Envie uma exportação menor "
+                            + "ou reduza o escopo dos recursos.");
+        }
+    }
+
+    String formatarTamanhoAproximado(long bytes) {
+        if (bytes < KIBIBYTE) {
+            return bytes + " B";
+        }
+        long kb = (bytes + KIBIBYTE - 1) / KIBIBYTE;
+        return kb + " KB";
+    }
+
+    private List<RecursoAws> lerRecursos(MultipartFile arquivo) {
         try {
             JsonNode raiz = objectMapper.readTree(arquivo.getInputStream());
             List<RecursoAws> recursos = new ArrayList<>();

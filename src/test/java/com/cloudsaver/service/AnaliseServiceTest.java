@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AnaliseServiceTest {
 
@@ -223,6 +225,32 @@ class AnaliseServiceTest {
         assertThat(resultado.getRecursos()).extracting("custoMensal")
                 .containsExactly(new BigDecimal("121.18"), new BigDecimal("30.40"), new BigDecimal("50.00"));
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("201.58"));
+    }
+
+    @Test
+    void deveRejeitarArquivoAcimaDoLimiteDeTamanho() {
+        ReflectionTestUtils.setField(service, "tamanhoMaximoArquivoKb", 1);
+        byte[] conteudo = new byte[1500];
+        for (int i = 0; i < conteudo.length; i++) {
+            conteudo[i] = (byte) '{';
+        }
+        MockMultipartFile arquivo = new MockMultipartFile(
+                "file", "grande.json", "application/json", conteudo);
+
+        assertThatThrownBy(() -> service.validarArquivoInventario(arquivo))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Arquivo grande demais")
+                .hasMessageContaining("3 KB");
+    }
+
+    @Test
+    void deveAceitarArquivoDentroDoLimiteDeTamanho() {
+        ReflectionTestUtils.setField(service, "tamanhoMaximoArquivoKb", 128);
+        MockMultipartFile arquivo = new MockMultipartFile(
+                "file", "ok.json", "application/json", "{\"resources\":[]}".getBytes());
+
+        assertThatCode(() -> service.validarArquivoInventario(arquivo))
+                .doesNotThrowAnyException();
     }
 
     @Test
