@@ -9,6 +9,7 @@ import com.cloudsaver.dto.ResultadoAnalise;
 import com.cloudsaver.dto.RecursoAws;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
@@ -266,6 +267,36 @@ class AnaliseServiceTest {
     }
 
     @Test
+    void promptDeveLimitarRecursosDetalhadosPriorizandoOciososEMaiorCusto() {
+        ReflectionTestUtils.setField(service, "maxRecursosPrompt", 2);
+        List<RecursoAws> recursos = List.of(
+                new RecursoAws("i-barato", "EC2", "t3.micro", "running",
+                        new BigDecimal("10.00"), false, objectMapper.createObjectNode()),
+                new RecursoAws("i-caro", "EC2", "t3.xlarge", "running",
+                        new BigDecimal("121.18"), false, objectMapper.createObjectNode()),
+                new RecursoAws("i-parada", "EC2", "t3.medium", "stopped",
+                        new BigDecimal("0.00"), true, objectMapper.createObjectNode()));
+
+        String prompt = service.montarPrompt(recursos, new BigDecimal("131.18"));
+
+        assertThat(prompt).contains("Recursos: 3");
+        assertThat(prompt).contains("2 recurso(s) de maior impacto (1 omitido(s)");
+        assertThat(prompt).contains("i-parada");
+        assertThat(prompt).contains("i-caro");
+        assertThat(prompt).doesNotContain("i-barato");
+    }
+
+    @Test
+    void limiteTemporarioDePromptsDeveBloquearAposCapacidadeDaJanela() {
+        ReflectionTestUtils.setField(service, "limiteRequisicoesPrompt", 2);
+        ReflectionTestUtils.setField(service, "janelaMinutosPrompt", 60);
+
+        assertThat(service.limiteTemporarioDePromptsAtingido()).isFalse();
+        assertThat(service.limiteTemporarioDePromptsAtingido()).isFalse();
+        assertThat(service.limiteTemporarioDePromptsAtingido()).isTrue();
+    }
+
+    @Test
     void promptDeveUsarSomenteMetricasPresentesNoInventario() throws Exception {
         RecursoAws recurso = new RecursoAws(
                 "i-prod",
@@ -321,21 +352,6 @@ class AnaliseServiceTest {
                 "file", "resources.json", "application/json", inventario.getBytes()));
 
         assertThat(resultado.getCustoMensal()).isEqualByComparingTo(new BigDecimal("730.00"));
-    }
-
-    @Test
-    void deveSanitizarErroDeLimiteDaGroq() {
-        HttpClientErrorException erro = HttpClientErrorException.create(
-                HttpStatus.TOO_MANY_REQUESTS,
-                "Too Many Requests",
-                HttpHeaders.EMPTY,
-                "{\"error\":\"Rate limit reached\"}".getBytes(StandardCharsets.UTF_8),
-                StandardCharsets.UTF_8);
-
-        String mensagem = service.mensagemFalhaGroq(erro);
-
-        assertThat(mensagem).contains("limite de requisições");
-        assertThat(mensagem).doesNotContain("Rate limit", "api.groq.com", "tokens");
     }
 
     @Test

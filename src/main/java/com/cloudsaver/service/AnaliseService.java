@@ -15,7 +15,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -77,6 +80,18 @@ public class AnaliseService {
 
     @Value("${groq.model:llama-3.3-70b-versatile}")
     private String groqModel;
+
+    @Value("${groq.prompt.max-recursos:50}")
+    private int maxRecursosPrompt = 50;
+
+    @Value("${groq.prompt.limite-requisicoes:30}")
+    private int limiteRequisicoesPrompt = 30;
+
+    @Value("${groq.prompt.janela-minutos:60}")
+    private int janelaMinutosPrompt = 60;
+
+    private final Object limitePromptLock = new Object();
+    private final Deque<Long> requisicoesPrompt = new ArrayDeque<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
@@ -330,6 +345,9 @@ public class AnaliseService {
                     + " recurso(s) analisado(s), sendo " + ociosos
                     + " potencialmente ocioso(s), com custo estimado de ~US$ " + custoTotal + "/mês.";
         }
+        if (limiteTemporarioDePromptsAtingido()) {
+            return mensagemLimiteTemporarioPrompt();
+        }
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -363,18 +381,62 @@ public class AnaliseService {
     String mensagemFalhaGroq(Exception excecao) {
         if (excecao instanceof HttpStatusCodeException erro
                 && erro.getStatusCode().value() == 429) {
-            return "A recomendação está temporariamente indisponível porque o limite "
-                    + "de uso da IA foi atingido. Tente novamente em alguns instantes.";
+            return mensagemLimiteTemporarioPrompt();
         }
         return "Não foi possível gerar a recomendação da IA agora. "
                 + "A análise dos recursos foi concluída; tente novamente mais tarde.";
     }
 
+    String mensagemLimiteTemporarioPrompt() {
+        return "A recomendação está temporariamente indisponível porque o limite "
+                + "de uso da IA foi atingido. Tente novamente em alguns instantes.";
+    }
+
+    boolean limiteTemporarioDePromptsAtingido() {
+        if (limiteRequisicoesPrompt <= 0) {
+            return false;
+        }
+        synchronized (limitePromptLock) {
+            long agora = System.currentTimeMillis();
+            long janelaMs = Math.max(1, janelaMinutosPrompt) * 60_000L;
+            while (!requisicoesPrompt.isEmpty() && agora - requisicoesPrompt.peekFirst() > janelaMs) {
+                requisicoesPrompt.pollFirst();
+            }
+            if (requisicoesPrompt.size() >= limiteRequisicoesPrompt) {
+                return true;
+            }
+            requisicoesPrompt.addLast(agora);
+            return false;
+        }
+    }
+
+    List<RecursoAws> selecionarRecursosParaPrompt(List<RecursoAws> recursos) {
+        if (maxRecursosPrompt <= 0 || recursos.size() <= maxRecursosPrompt) {
+            return recursos;
+        }
+        return recursos.stream()
+                .sorted(Comparator
+                        .comparing(RecursoAws::ocioso).reversed()
+                        .thenComparing(this::custoMensal, Comparator.reverseOrder())
+                        .thenComparing(RecursoAws::id))
+                .limit(maxRecursosPrompt)
+                .toList();
+    }
+
     String montarPrompt(List<RecursoAws> recursos, BigDecimal custoTotal) {
+        List<RecursoAws> detalhados = selecionarRecursosParaPrompt(recursos);
+        int omitidos = recursos.size() - detalhados.size();
+
         StringBuilder sb = new StringBuilder("Inventário AWS analisado:\n");
         sb.append("- Recursos: ").append(recursos.size())
                 .append("\n- Custo mensal estimado: US$ ").append(custoTotal).append("\n");
-        recursos.forEach(r -> {
+        if (omitidos > 0) {
+            sb.append("- Detalhamento enviado à IA: ").append(detalhados.size())
+                    .append(" recurso(s) de maior impacto (").append(omitidos)
+                    .append(" omitido(s) para respeitar o limite temporário de tokens; ")
+                    .append("os totais acima refletem todo o inventário).\n");
+        }
+        detalhados.forEach(r -> {
             sb.append("  * ").append(r.servico()).append(" ")
                     .append(r.id()).append(" (").append(r.tipo()).append(", ")
                     .append(r.estado()).append(", ocioso: ").append(r.ocioso())
