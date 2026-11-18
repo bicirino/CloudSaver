@@ -2,6 +2,8 @@ package com.cloudsaver.config;
 
 import com.cloudsaver.security.ApiKeyAuthFilter;
 import com.cloudsaver.security.RateLimitFilter;
+import com.cloudsaver.security.SupabaseAuthFilter;
+import com.cloudsaver.service.SupabaseAuthService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +35,12 @@ public class SecurityConfig {
     @Value("${cloudsaver.security.rate-limit-janela-minutos:60}")
     private int rateLimitJanelaMinutos;
 
+    private final SupabaseAuthService supabaseAuthService;
+
+    public SecurityConfig(SupabaseAuthService supabaseAuthService) {
+        this.supabaseAuthService = supabaseAuthService;
+    }
+
     @Bean
     UserDetailsService disabledDefaultUsers() {
         return username -> {
@@ -44,6 +52,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         ApiKeyAuthFilter apiKeyAuthFilter = new ApiKeyAuthFilter(apiKey, requireApiKey);
         RateLimitFilter rateLimitFilter = new RateLimitFilter(rateLimitPorCliente, rateLimitJanelaMinutos);
+        SupabaseAuthFilter supabaseAuthFilter = new SupabaseAuthFilter(supabaseAuthService);
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,10 +60,12 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/index.html", "/analise.html", "/gerar-json.html",
+                        .requestMatchers("/", "/index.html", "/analise.html", "/gerar-json.html", "/historico.html",
                                 "/styles.css", "/app.js", "/favicon.ico",
                                 "/error", "/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/analise").permitAll()
+                        .requestMatchers("/api/config").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/analise", "/api/scan/upload").authenticated()
+                        .requestMatchers("/api/history/**", "/api/scan/history/**").authenticated()
                         .requestMatchers("/api/**").permitAll()
                         .anyRequest().permitAll())
                 .headers(headers -> headers
@@ -63,8 +74,8 @@ public class SecurityConfig {
                                         + "script-src 'self' https://cdn.jsdelivr.net; "
                                         + "style-src 'self' 'unsafe-inline' https://cdn-uicons.flaticon.com; "
                                         + "font-src 'self' https://cdn-uicons.flaticon.com data:; "
-                                        + "img-src 'self' data:; "
-                                        + "connect-src 'self'; "
+                                        + "img-src 'self' data: https://*.googleusercontent.com https://avatars.githubusercontent.com; "
+                                        + "connect-src 'self' https://*.supabase.co wss://*.supabase.co; "
                                         + "frame-ancestors 'none'; "
                                         + "base-uri 'self'; "
                                         + "form-action 'self'"))
@@ -76,7 +87,8 @@ public class SecurityConfig {
                                 .includeSubDomains(true)
                                 .maxAgeInSeconds(31_536_000)))
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(supabaseAuthFilter, ApiKeyAuthFilter.class);
 
         return http.build();
     }

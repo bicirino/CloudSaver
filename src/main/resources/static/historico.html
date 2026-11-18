@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudSaver | Histórico e Evolução de Custos</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
+            integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="app-page">
+    <header class="topbar">
+        <a class="brand" href="index.html">CloudSaver</a>
+        <div class="topbar-actions">
+            <span class="connection-status"><span aria-hidden="true">●</span> SaaS FinOps &amp; Histórico</span>
+            <div id="auth-nav-container" class="auth-nav-container">
+                <!-- Preenchido via app.js: Botão Entrar ou Badge de Usuário -->
+            </div>
+        </div>
+    </header>
+
+    <div class="app-shell">
+        <aside class="app-sidebar" aria-label="Menu principal">
+            <p class="sidebar-label">Navegação</p>
+            <nav class="side-nav">
+                <a class="side-nav-link" href="index.html"><i class="fi fi-rr-home" aria-hidden="true"></i> Visão geral</a>
+                <a class="side-nav-link" href="gerar-json.html"><i class="fi fi-rr-file-code" aria-hidden="true"></i> Como gerar JSON</a>
+                <a class="side-nav-link" href="analise.html"><i class="fi fi-rr-search" aria-hidden="true"></i> Analisar estrutura</a>
+                <a class="side-nav-link is-active" href="historico.html"><i class="fi fi-rr-time-past" aria-hidden="true"></i> Histórico</a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span>Persistência segura via Supabase</span>
+            </div>
+        </aside>
+
+        <main class="dashboard">
+            <header class="page-header">
+                <p class="breadcrumb">CloudSaver <span aria-hidden="true">/</span> Histórico</p>
+                <p class="eyebrow">Dashboard Temporal</p>
+                <h1>Histórico de Análises e Evolução de Custos</h1>
+                <p class="intro">Acompanhe a tendência dos custos da sua infraestrutura AWS ao longo do tempo e consulte relatórios passados com as recomendações geradas por IA.</p>
+            </header>
+
+            <!-- Alerta quando deslogado -->
+            <div id="historico-auth-alert" class="card auth-required-card" hidden>
+                <div class="auth-required-content">
+                    <div class="auth-required-icon"><i class="fi fi-rr-lock"></i></div>
+                    <div>
+                        <h3>Acesso ao Histórico Restrito</h3>
+                        <p>Faça login ou crie sua conta para visualizar seu histórico de scans e gráficos de evolução temporal.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="abrirModalAuth('login')">
+                    <i class="fi fi-rr-user"></i> Fazer login / Cadastrar
+                </button>
+            </div>
+
+            <!-- Dashboard de Histórico (Visível após autenticação) -->
+            <div id="historico-conteudo" hidden>
+                <!-- Indicadores Comparativos -->
+                <section class="metrics stats-grid" aria-label="Indicadores de evolução">
+                    <article class="metric">
+                        <p class="metric-label">Custo Atual Estimado</p>
+                        <p class="metric-value metric-value--accent" id="stat-custo-atual">—</p>
+                        <p class="metric-sub" id="stat-data-atual">Último scan</p>
+                    </article>
+                    <article class="metric">
+                        <p class="metric-label">Variação vs. Scan Anterior</p>
+                        <p class="metric-value" id="stat-variacao">—</p>
+                        <p class="metric-sub" id="stat-variacao-desc">Comparação direta</p>
+                    </article>
+                    <article class="metric">
+                        <p class="metric-label">Recursos no Último Scan</p>
+                        <p class="metric-value" id="stat-recursos">—</p>
+                        <p class="metric-sub" id="stat-recursos-ociosos">— ociosos</p>
+                    </article>
+                    <article class="metric">
+                        <p class="metric-label">Total de Scans Realizados</p>
+                        <p class="metric-value" id="stat-total-scans">0</p>
+                        <p class="metric-sub">Análises persistidas</p>
+                    </article>
+                </section>
+
+                <!-- Gráfico de Linha / Área de Tendência Temporal -->
+                <section class="card trend-card" aria-labelledby="titulo-grafico-tendencia">
+                    <div class="section-heading">
+                        <div>
+                            <p class="section-kicker">Evolução FinOps</p>
+                            <h2 id="titulo-grafico-tendencia" class="card-title">Tendência do Custo Mensal Estimado</h2>
+                        </div>
+                        <span class="badge badge-info"><i class="fi fi-rr-chart-line-up"></i> Linha temporal</span>
+                    </div>
+                    <div class="trend-chart-area">
+                        <canvas id="grafico-tendencia-custos" aria-label="Gráfico de tendência de evolução de custos"></canvas>
+                    </div>
+                </section>
+
+                <!-- Tabela de Scans Anteriores -->
+                <section class="content-section card" aria-labelledby="titulo-tabela-historico">
+                    <div class="section-heading">
+                        <div>
+                            <p class="section-kicker">Registros</p>
+                            <h2 id="titulo-tabela-historico" class="card-title">Todas as análises realizadas</h2>
+                        </div>
+                        <a href="analise.html" class="btn btn-outline btn-sm">
+                            <i class="fi fi-rr-plus"></i> Nova análise
+                        </a>
+                    </div>
+
+                    <div id="historico-loading" class="analise-loading" hidden>
+                        <span class="spinner" aria-hidden="true"></span> Carregando histórico…
+                    </div>
+                    <p id="historico-erro" class="analise-erro" hidden role="alert"></p>
+
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data &amp; Hora</th>
+                                    <th>Arquivo</th>
+                                    <th>Recursos</th>
+                                    <th>Ociosos</th>
+                                    <th>Custo Mensal</th>
+                                    <th class="text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-historico-corpo">
+                                <tr>
+                                    <td colspan="6" class="table-empty">Nenhum scan encontrado.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Visualização de Detalhes do Scan Antigo -->
+    <div id="modal-scan-detalhes" class="modal-backdrop" hidden>
+        <div class="modal-dialog modal-dialog-lg" role="dialog" aria-modal="true" aria-labelledby="modal-scan-titulo">
+            <header class="modal-header">
+                <div>
+                    <p class="section-kicker" id="modal-scan-data">Detalhes do Scan</p>
+                    <h3 id="modal-scan-titulo" class="modal-title">Relatório da Análise</h3>
+                </div>
+                <button type="button" class="btn-modal-fechar" onclick="fecharModalDetalhes()" aria-label="Fechar">✕</button>
+            </header>
+            <div class="modal-body" id="modal-scan-conteudo">
+                <!-- Conteúdo preenchido dinamicamente -->
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="fecharModalDetalhes()">Fechar</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal de Autenticação Supabase (Login / Cadastro) -->
+    <div id="modal-auth" class="modal-backdrop" hidden>
+        <div class="modal-dialog modal-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="auth-modal-titulo">
+            <header class="modal-header">
+                <h3 id="auth-modal-titulo" class="modal-title">Acessar CloudSaver</h3>
+                <button type="button" class="btn-modal-fechar" onclick="fecharModalAuth()" aria-label="Fechar">✕</button>
+            </header>
+            <div class="modal-body">
+                <div class="auth-tabs" role="tablist">
+                    <button type="button" class="auth-tab is-active" id="tab-login" onclick="alternarAbaAuth('login')">Entrar</button>
+                    <button type="button" class="auth-tab" id="tab-cadastro" onclick="alternarAbaAuth('cadastro')">Criar conta</button>
+                </div>
+
+                <div id="auth-alerta" class="auth-alerta" hidden role="alert"></div>
+
+                <form id="form-auth" onsubmit="processarAuth(event)">
+                    <div class="form-group">
+                        <label for="auth-email">E-mail</label>
+                        <input type="email" id="auth-email" class="form-control" placeholder="seu@email.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="auth-senha">Senha</label>
+                        <input type="password" id="auth-senha" class="form-control" placeholder="••••••••" required minlength="6" autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btn-auth-submit">
+                        Entrar
+                    </button>
+                </form>
+
+                <div class="auth-divider"><span>ou continue com</span></div>
+
+                <div class="oauth-buttons">
+                    <button type="button" class="btn-oauth" onclick="loginOAuth('github')">
+                        <i class="fi fi-rr-brand-github"></i> GitHub
+                    </button>
+                    <button type="button" class="btn-oauth" onclick="loginOAuth('google')">
+                        <i class="fi fi-rr-brand-google"></i> Google
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

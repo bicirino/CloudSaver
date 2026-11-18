@@ -13,6 +13,14 @@ spring:
     multipart:
       max-file-size: 100KB
       max-request-size: 100KB
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${SUPABASE_DB_URL:jdbc:h2:mem:cloudsaver;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}}
+    username: ${SPRING_DATASOURCE_USERNAME:${SUPABASE_DB_USER:sa}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${SUPABASE_DB_PASSWORD:}}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 management:
   endpoints:
@@ -35,6 +43,12 @@ cloudsaver:
     rate-limit-janela-minutos: ${CLOUDSAVER_RATE_LIMIT_JANELA_MINUTOS:60}
   analise:
     max-recursos: ${CLOUDSAVER_ANALISE_MAX_RECURSOS:500}
+  supabase:
+    url: ${SUPABASE_URL:}
+    anon-key: ${SUPABASE_ANON_KEY:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    jwt-secret: ${SUPABASE_JWT_SECRET:}
+    auth-required: ${SUPABASE_AUTH_REQUIRED:false}
 
 groq:
   api:

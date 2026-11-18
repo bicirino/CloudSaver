@@ -6,9 +6,16 @@
     <title>CloudSaver | Como gerar JSON</title>
     <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.6.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="app-page">
-    <header class="topbar"><a class="brand" href="index.html">CloudSaver</a><span class="connection-status"><span aria-hidden="true">●</span> Cálculo local + IA opcional</span></header>
+    <header class="topbar">
+        <a class="brand" href="index.html">CloudSaver</a>
+        <div class="topbar-actions">
+            <span class="connection-status"><span aria-hidden="true">●</span> Cálculo local + IA opcional</span>
+            <div id="auth-nav-container" class="auth-nav-container"></div>
+        </div>
+    </header>
     <div class="app-shell">
         <aside class="app-sidebar" aria-label="Menu principal">
             <p class="sidebar-label">Navegação</p>
@@ -16,6 +23,7 @@
                 <a class="side-nav-link" href="index.html"><i class="fi fi-rr-home" aria-hidden="true"></i> Visão geral</a>
                 <a class="side-nav-link is-active" href="gerar-json.html"><i class="fi fi-rr-file-code" aria-hidden="true"></i> Como gerar JSON</a>
                 <a class="side-nav-link" href="analise.html"><i class="fi fi-rr-search" aria-hidden="true"></i> Analisar estrutura</a>
+                <a class="side-nav-link" href="historico.html"><i class="fi fi-rr-time-past" aria-hidden="true"></i> Histórico</a>
             </nav>
             <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span><span>Custos locais; IA só com consentimento</span></div>
         </aside>
@@ -34,6 +42,40 @@
             <div class="page-actions"><a class="btn btn-primary" href="analise.html">Ir para Analisar estrutura</a></div>
         </main>
     </div>
+
+    <!-- Modal de Autenticação Supabase (Login / Cadastro) -->
+    <div id="modal-auth" class="modal-backdrop" hidden>
+        <div class="modal-dialog modal-dialog-sm" role="dialog" aria-modal="true" aria-labelledby="auth-modal-titulo">
+            <header class="modal-header">
+                <h3 id="auth-modal-titulo" class="modal-title">Acessar CloudSaver</h3>
+                <button type="button" class="btn-modal-fechar" onclick="fecharModalAuth()" aria-label="Fechar">✕</button>
+            </header>
+            <div class="modal-body">
+                <div class="auth-tabs" role="tablist">
+                    <button type="button" class="auth-tab is-active" id="tab-login" onclick="alternarAbaAuth('login')">Entrar</button>
+                    <button type="button" class="auth-tab" id="tab-cadastro" onclick="alternarAbaAuth('cadastro')">Criar conta</button>
+                </div>
+                <div id="auth-alerta" class="auth-alerta" hidden role="alert"></div>
+                <form id="form-auth" onsubmit="processarAuth(event)">
+                    <div class="form-group">
+                        <label for="auth-email">E-mail</label>
+                        <input type="email" id="auth-email" class="form-control" placeholder="seu@email.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="auth-senha">Senha</label>
+                        <input type="password" id="auth-senha" class="form-control" placeholder="••••••••" required minlength="6" autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btn-auth-submit">Entrar</button>
+                </form>
+                <div class="auth-divider"><span>ou continue com</span></div>
+                <div class="oauth-buttons">
+                    <button type="button" class="btn-oauth" onclick="loginOAuth('github')"><i class="fi fi-rr-brand-github"></i> GitHub</button>
+                    <button type="button" class="btn-oauth" onclick="loginOAuth('google')"><i class="fi fi-rr-brand-google"></i> Google</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

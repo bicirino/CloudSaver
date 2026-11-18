@@ -1,17 +1,13 @@
-// Cria uma função assíncrona (executa em segundo plano) para copiar o comando de código 
+// Cria uma função assíncrona para copiar o comando de código 
 async function copyCode(button) {
-
-    // Localiza o elemento pai mais próximo com a classe 'comando' e, em seguida, procura o elemento <code> dentro dele 
     const container = button.closest('.comando');
     const codeElement = container?.querySelector('code');
 
-    // Se o elemento <code> não for encontrado, exibe um erro no console 
     if (!codeElement) {
         console.error('Não foi possível localizar o comando para copiar.');
         return;
     }
 
-    // Tenta copiar o texto do elemento <code> para a área de transferência
     try {
         await navigator.clipboard.writeText(codeElement.innerText);
         container.classList.remove('is-copiado');
@@ -36,12 +32,575 @@ function formatarUsd(valor) {
     }).format(numero);
 }
 
+// Função para formatar data e hora ISO
+function formatarDataHora(isoString) {
+    if (!isoString) return '—';
+    try {
+        const data = new Date(isoString);
+        return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(data);
+    } catch {
+        return isoString;
+    }
+}
+
 let graficoCustosServico;
 let graficoCustosRecurso;
+let graficoTendenciaCustos;
 const LIMITE_RECURSOS_GRAFICO = 12;
 const LIMITE_TAMANHO_ARQUIVO_KB = 100;
 const LIMITE_TAMANHO_ARQUIVO_BYTES = LIMITE_TAMANHO_ARQUIVO_KB * 1024;
 
+// ==============================================================================
+// Autenticação Supabase
+// ==============================================================================
+let supabaseClient = null;
+let currentUser = null;
+let authRequired = false;
+let modoAuthAtual = 'login';
+
+async function inicializarSupabase() {
+    try {
+        const resposta = await fetch('/api/config');
+        if (resposta.ok) {
+            const config = await resposta.json();
+            authRequired = config.authRequired === true;
+
+            if (config.supabaseUrl && config.supabaseAnonKey && window.supabase) {
+                supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+                supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                    currentUser = session?.user ?? null;
+                    atualizarInterfaceAuth();
+                    if (window.location.pathname.endsWith('historico.html')) {
+                        carregarHistorico();
+                    }
+                });
+
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                currentUser = session?.user ?? null;
+            }
+        }
+    } catch (e) {
+        console.warn('Configuração do Supabase não pôde ser carregada:', e);
+    }
+
+    atualizarInterfaceAuth();
+
+    if (window.location.pathname.endsWith('historico.html')) {
+        carregarHistorico();
+    }
+}
+
+async function obterTokenAuth() {
+    if (supabaseClient) {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session?.access_token) {
+                return session.access_token;
+            }
+        } catch (e) {
+            console.error('Erro ao obter token Supabase:', e);
+        }
+    }
+    return '';
+}
+
+function atualizarInterfaceAuth() {
+    const containers = document.querySelectorAll('.auth-nav-container, #auth-nav-container');
+    containers.forEach((container) => {
+        if (!container) return;
+        if (currentUser) {
+            const email = currentUser.email || 'Usuário';
+            container.innerHTML = `
+                <div class="user-badge">
+                    <i class="fi fi-rr-user-check" aria-hidden="true"></i>
+                    <span class="user-email-text" title="${escaparHtml(email)}">${escaparHtml(email)}</span>
+                    <button type="button" class="btn-logout" onclick="fazerLogout()" title="Sair da conta">
+                        <i class="fi fi-rr-sign-out-alt" aria-hidden="true"></i> Sair
+                    </button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <button type="button" class="btn-outline-auth" onclick="abrirModalAuth('login')">
+                    <i class="fi fi-rr-user" aria-hidden="true"></i> Entrar
+                </button>
+            `;
+        }
+    });
+
+    // Atualiza avisos específicos da página de análise
+    const avisoAnalise = document.getElementById('analise-auth-notice');
+    if (avisoAnalise) {
+        avisoAnalise.hidden = !!currentUser;
+    }
+
+    // Atualiza visão do histórico
+    const historicoAlerta = document.getElementById('historico-auth-alert');
+    const historicoConteudo = document.getElementById('historico-conteudo');
+    if (historicoAlerta && historicoConteudo) {
+        const podeVer = currentUser || !authRequired;
+        historicoAlerta.hidden = podeVer;
+        historicoConteudo.hidden = !podeVer;
+    }
+}
+
+function abrirModalAuth(modo = 'login') {
+    const modal = document.getElementById('modal-auth');
+    if (!modal) return;
+    modoAuthAtual = modo;
+    alternarAbaAuth(modo);
+    mostrarAlertaAuth('');
+    modal.hidden = false;
+    document.getElementById('auth-email')?.focus();
+}
+
+function fecharModalAuth() {
+    const modal = document.getElementById('modal-auth');
+    if (modal) modal.hidden = true;
+    mostrarAlertaAuth('');
+}
+
+function alternarAbaAuth(modo) {
+    modoAuthAtual = modo;
+    const tabLogin = document.getElementById('tab-login');
+    const tabCadastro = document.getElementById('tab-cadastro');
+    const btnSubmit = document.getElementById('btn-auth-submit');
+    const titulo = document.getElementById('auth-modal-titulo');
+
+    if (modo === 'login') {
+        tabLogin?.classList.add('is-active');
+        tabCadastro?.classList.remove('is-active');
+        if (btnSubmit) btnSubmit.textContent = 'Entrar';
+        if (titulo) titulo.textContent = 'Acessar CloudSaver';
+    } else {
+        tabCadastro?.classList.add('is-active');
+        tabLogin?.classList.remove('is-active');
+        if (btnSubmit) btnSubmit.textContent = 'Criar conta';
+        if (titulo) titulo.textContent = 'Criar conta no CloudSaver';
+    }
+    mostrarAlertaAuth('');
+}
+
+function mostrarAlertaAuth(mensagem, tipo = 'erro') {
+    const alerta = document.getElementById('auth-alerta');
+    if (!alerta) return;
+    if (!mensagem) {
+        alerta.hidden = true;
+        alerta.textContent = '';
+        alerta.className = 'auth-alerta';
+        return;
+    }
+    alerta.textContent = mensagem;
+    alerta.className = `auth-alerta alerta-${tipo}`;
+    alerta.hidden = false;
+}
+
+async function processarAuth(event) {
+    event.preventDefault();
+    if (!supabaseClient) {
+        mostrarAlertaAuth('Supabase não configurado no servidor. Configure as variáveis SUPABASE_URL e SUPABASE_ANON_KEY no arquivo .env.');
+        return;
+    }
+
+    const email = document.getElementById('auth-email')?.value?.trim();
+    const password = document.getElementById('auth-senha')?.value;
+    const btn = document.getElementById('btn-auth-submit');
+
+    if (!email || !password) {
+        mostrarAlertaAuth('Por favor, preencha todos os campos.');
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    mostrarAlertaAuth('');
+
+    try {
+        if (modoAuthAtual === 'login') {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                mostrarAlertaAuth(error.message === 'Invalid login credentials'
+                    ? 'E-mail ou senha incorretos.'
+                    : `Erro no login: ${error.message}`);
+                return;
+            }
+            currentUser = data.user;
+            fecharModalAuth();
+            atualizarInterfaceAuth();
+            if (window.location.pathname.endsWith('historico.html')) {
+                carregarHistorico();
+            }
+        } else {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+                mostrarAlertaAuth(`Erro no cadastro: ${error.message}`);
+                return;
+            }
+            if (data.session) {
+                currentUser = data.user;
+                fecharModalAuth();
+                atualizarInterfaceAuth();
+                if (window.location.pathname.endsWith('historico.html')) {
+                    carregarHistorico();
+                }
+            } else {
+                mostrarAlertaAuth('Conta criada com sucesso! Verifique seu e-mail para confirmar o cadastro.', 'sucesso');
+            }
+        }
+    } catch (e) {
+        mostrarAlertaAuth(`Ocorreu um erro inesperado: ${e.message}`);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function loginOAuth(provider) {
+    if (!supabaseClient) {
+        mostrarAlertaAuth('Supabase não configurado. Defina SUPABASE_URL e SUPABASE_ANON_KEY no .env.');
+        return;
+    }
+    try {
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+            provider,
+            options: {
+                redirectTo: window.location.href,
+            },
+        });
+        if (error) {
+            mostrarAlertaAuth(`Falha ao conectar com ${provider}: ${error.message}`);
+        }
+    } catch (e) {
+        mostrarAlertaAuth(`Erro ao iniciar OAuth: ${e.message}`);
+    }
+}
+
+async function fazerLogout() {
+    if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+    }
+    currentUser = null;
+    atualizarInterfaceAuth();
+    if (window.location.pathname.endsWith('historico.html')) {
+        carregarHistorico();
+    }
+}
+
+// ==============================================================================
+// Dashboard Temporal e Histórico de Scans
+// ==============================================================================
+async function carregarHistorico() {
+    const loading = document.getElementById('historico-loading');
+    const erroEl = document.getElementById('historico-erro');
+    if (!document.getElementById('historico-conteudo')) return;
+
+    if (loading) loading.hidden = false;
+    if (erroEl) erroEl.hidden = true;
+
+    const token = await obterTokenAuth();
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+        const [respHistorico, respStats] = await Promise.all([
+            fetch('/api/history', { headers }),
+            fetch('/api/history/stats', { headers }),
+        ]);
+
+        if (respHistorico.status === 401) {
+            atualizarInterfaceAuth();
+            return;
+        }
+
+        if (!respHistorico.ok) {
+            throw new Error(`Falha ao obter histórico (HTTP ${respHistorico.status})`);
+        }
+
+        const scans = await respHistorico.json();
+        let stats = null;
+        if (respStats.ok) {
+            stats = await respStats.json();
+        }
+
+        renderizarEstatisticas(stats, scans);
+        renderizarGraficoTendencia(scans);
+        renderizarTabelaHistorico(scans);
+    } catch (e) {
+        console.error(e);
+        if (erroEl) {
+            erroEl.textContent = 'Não foi possível carregar o histórico de análises. Verifique se o servidor está ativo.';
+            erroEl.hidden = false;
+        }
+    } finally {
+        if (loading) loading.hidden = true;
+    }
+}
+
+function renderizarEstatisticas(stats, scans) {
+    const custoAtualEl = document.getElementById('stat-custo-atual');
+    const dataAtualEl = document.getElementById('stat-data-atual');
+    const variacaoEl = document.getElementById('stat-variacao');
+    const variacaoDescEl = document.getElementById('stat-variacao-desc');
+    const recursosEl = document.getElementById('stat-recursos');
+    const recursosOciososEl = document.getElementById('stat-recursos-ociosos');
+    const totalScansEl = document.getElementById('stat-total-scans');
+
+    if (!stats || !scans || scans.length === 0) {
+        if (custoAtualEl) custoAtualEl.textContent = '—';
+        if (dataAtualEl) dataAtualEl.textContent = 'Nenhum scan';
+        if (variacaoEl) variacaoEl.textContent = '—';
+        if (variacaoDescEl) variacaoDescEl.textContent = 'Sem dados anteriores';
+        if (recursosEl) recursosEl.textContent = '—';
+        if (recursosOciososEl) recursosOciososEl.textContent = '—';
+        if (totalScansEl) totalScansEl.textContent = '0';
+        return;
+    }
+
+    const maisRecente = scans[0];
+    if (custoAtualEl) custoAtualEl.textContent = formatarUsd(stats.custoAtual);
+    if (dataAtualEl) dataAtualEl.textContent = formatarDataHora(maisRecente.createdAt);
+    if (recursosEl) recursosEl.textContent = stats.totalRecursosAtual;
+    if (recursosOciososEl) recursosOciososEl.textContent = `${stats.totalParadasAtual} potencialmente ociosos`;
+    if (totalScansEl) totalScansEl.textContent = stats.totalScans;
+
+    if (variacaoEl) {
+        if (stats.totalScans < 2) {
+            variacaoEl.innerHTML = '<span class="badge-variacao badge-variacao--neutro">Scan inicial</span>';
+            if (variacaoDescEl) variacaoDescEl.textContent = 'Primeira análise registrada';
+        } else {
+            const varPct = Number(stats.variacaoPercentual);
+            const varAbs = Number(stats.variacaoAbsoluta);
+            if (varPct < 0) {
+                variacaoEl.innerHTML = `<span class="badge-variacao badge-variacao--economia"><i class="fi fi-rr-arrow-trend-down"></i> ${Math.abs(varPct).toFixed(1)}% (${formatarUsd(Math.abs(varAbs))})</span>`;
+                if (variacaoDescEl) variacaoDescEl.textContent = 'Economia identificada';
+            } else if (varPct > 0) {
+                variacaoEl.innerHTML = `<span class="badge-variacao badge-variacao--aumento"><i class="fi fi-rr-arrow-trend-up"></i> +${varPct.toFixed(1)}% (+${formatarUsd(varAbs)})</span>`;
+                if (variacaoDescEl) variacaoDescEl.textContent = 'Aumento de custos';
+            } else {
+                variacaoEl.innerHTML = '<span class="badge-variacao badge-variacao--neutro">0.0% estável</span>';
+                if (variacaoDescEl) variacaoDescEl.textContent = 'Sem alteração de custos';
+            }
+        }
+    }
+}
+
+function renderizarGraficoTendencia(scans) {
+    const canvas = document.getElementById('grafico-tendencia-custos');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    graficoTendenciaCustos?.destroy();
+
+    if (!scans || scans.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+    }
+
+    // Ordena do mais antigo para o mais novo para linha temporal
+    const scansCronologicos = [...scans].reverse();
+    const labels = scansCronologicos.map((s) => formatarDataHora(s.createdAt));
+    const custos = scansCronologicos.map((s) => Number(s.custoMensal));
+
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+    gradient.addColorStop(0, 'rgba(18, 59, 156, 0.25)');
+    gradient.addColorStop(1, 'rgba(18, 59, 156, 0.01)');
+
+    graficoTendenciaCustos = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Custo Mensal Estimado',
+                data: custos,
+                borderColor: '#123b9c',
+                borderWidth: 2.5,
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#123b9c',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => {
+                            const index = items[0].dataIndex;
+                            const scan = scansCronologicos[index];
+                            return `${labels[index]} (${scan.nomeArquivo || 'resources.json'})`;
+                        },
+                        label: (context) => ` Custo estimado: ${formatarUsd(context.raw)}`,
+                    },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (valor) => formatarUsd(valor),
+                    },
+                    grid: {
+                        color: 'rgba(224, 231, 240, 0.6)',
+                    },
+                },
+                x: {
+                    grid: {
+                        display: false,
+                    },
+                },
+            },
+        },
+    });
+}
+
+function renderizarTabelaHistorico(scans) {
+    const tbody = document.getElementById('tabela-historico-corpo');
+    if (!tbody) return;
+    tbody.replaceChildren();
+
+    if (!scans || scans.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" class="table-empty">Nenhum scan realizado ainda. Execute seu primeiro inventário na aba "Analisar estrutura".</td>';
+        tbody.appendChild(tr);
+        return;
+    }
+
+    scans.forEach((scan) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${escaparHtml(formatarDataHora(scan.createdAt))}</strong></td>
+            <td><code>${escaparHtml(scan.nomeArquivo || 'resources.json')}</code></td>
+            <td>${scan.totalRecursos}</td>
+            <td>${scan.totalParadas}</td>
+            <td><strong style="color: var(--blue);">${formatarUsd(scan.custoMensal)}</strong></td>
+            <td class="text-right">
+                <button type="button" class="btn-action-view" onclick="abrirModalDetalhes('${scan.id}')" title="Ver relatório completo">
+                    <i class="fi fi-rr-eye" aria-hidden="true"></i> Relatório
+                </button>
+                <button type="button" class="btn-action-delete" onclick="excluirScan('${scan.id}')" title="Excluir este scan">
+                    <i class="fi fi-rr-trash" aria-hidden="true"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function abrirModalDetalhes(scanId) {
+    const modal = document.getElementById('modal-scan-detalhes');
+    const conteudo = document.getElementById('modal-scan-conteudo');
+    const tituloData = document.getElementById('modal-scan-data');
+    if (!modal || !conteudo) return;
+
+    modal.hidden = false;
+    conteudo.innerHTML = '<p class="analise-loading"><span class="spinner" aria-hidden="true"></span> Carregando detalhes do scan…</p>';
+
+    const token = await obterTokenAuth();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const resposta = await fetch(`/api/history/${scanId}`, { headers });
+        if (!resposta.ok) {
+            throw new Error(`Erro ao buscar scan (HTTP ${resposta.status})`);
+        }
+        const dados = await resposta.json();
+
+        if (tituloData) {
+            tituloData.textContent = `Scan de ${formatarDataHora(dados.createdAt)}`;
+        }
+
+        const recomendacaoHtml = dados.recomendacao ? formatarMarkdown(dados.recomendacao) : '<p>Sem recomendação de IA registrada.</p>';
+        const recursos = dados.recursos || dados.instancias || [];
+
+        let tabelaRecursosHtml = '';
+        if (recursos.length > 0) {
+            tabelaRecursosHtml = `
+                <div class="table-wrap" style="margin-top: 24px;">
+                    <h4>Recursos analisados</h4>
+                    <table class="data-table">
+                        <thead><tr><th>Recurso</th><th>Serviço</th><th>Tipo / estado</th><th>Custo mensal</th></tr></thead>
+                        <tbody>
+                            ${recursos.map(r => `
+                                <tr>
+                                    <td>${escaparHtml(String(r.id || '—'))}</td>
+                                    <td>${escaparHtml(String(r.servico || 'EC2'))}</td>
+                                    <td>${escaparHtml(String(r.tipo || '—'))}${r.estado ? ` / ${escaparHtml(String(r.estado))}` : ''}</td>
+                                    <td>${formatarUsd(r.custoMensal)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        conteudo.innerHTML = `
+            <div class="metrics" style="margin-bottom: 20px;">
+                <article class="metric"><p class="metric-label">Recursos analisados</p><p class="metric-value">${dados.totalRecursos}</p></article>
+                <article class="metric"><p class="metric-label">Potencialmente ociosos</p><p class="metric-value">${dados.totalParadas}</p></article>
+                <article class="metric"><p class="metric-label">Custo mensal estimado</p><p class="metric-value metric-value--accent">${formatarUsd(dados.custoMensal)}</p></article>
+            </div>
+            <div class="recomendacao">
+                <h4>Recomendação FinOps (Groq)</h4>
+                <div class="recomendacao-conteudo">${recomendacaoHtml}</div>
+            </div>
+            ${tabelaRecursosHtml}
+        `;
+    } catch (e) {
+        console.error(e);
+        conteudo.innerHTML = `<p class="analise-erro" role="alert">Falha ao carregar relatório: ${escaparHtml(e.message)}</p>`;
+    }
+}
+
+function fecharModalDetalhes() {
+    const modal = document.getElementById('modal-scan-detalhes');
+    if (modal) modal.hidden = true;
+}
+
+async function excluirScan(scanId) {
+    if (!confirm('Deseja realmente excluir este scan do seu histórico? Esta ação é irreversível.')) {
+        return;
+    }
+
+    const token = await obterTokenAuth();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+        const resposta = await fetch(`/api/history/${scanId}`, {
+            method: 'DELETE',
+            headers,
+        });
+
+        if (!resposta.ok) {
+            throw new Error(`Erro ao excluir (HTTP ${resposta.status})`);
+        }
+
+        carregarHistorico();
+    } catch (e) {
+        alert(`Não foi possível excluir o scan: ${e.message}`);
+    }
+}
+
+// ==============================================================================
+// Gráficos de Análise e Markdown Helpers
+// ==============================================================================
 function prepararDadosGraficoRecursos(recursos) {
     const recursosComCusto = recursos
         .map((recurso, indice) => ({
@@ -135,6 +694,10 @@ function renderizarGraficosFallback(recursos) {
 }
 
 function renderizarGraficos(recursos) {
+    const elPizza = document.getElementById('grafico-custos-servico');
+    const elRecurso = document.getElementById('grafico-custos-recurso');
+    if (!elPizza || !elRecurso) return;
+
     if (typeof Chart === 'undefined') {
         console.error('Não foi possível carregar a biblioteca de gráficos.');
         renderizarGraficosFallback(recursos);
@@ -148,10 +711,7 @@ function renderizarGraficos(recursos) {
         const custosPorServico = new Map();
         recursos.forEach((recurso) => {
             const custo = Number(recurso.custoMensal);
-            if (!Number.isFinite(custo) || custo < 0) {
-                return;
-            }
-
+            if (!Number.isFinite(custo) || custo < 0) return;
             const servico = String(recurso.servico ?? 'Outros');
             custosPorServico.set(servico, (custosPorServico.get(servico) ?? 0) + custo);
         });
@@ -163,69 +723,69 @@ function renderizarGraficos(recursos) {
         const labelsRecursos = dadosGrafico.map((recurso) => recurso.id);
         const custosRecursos = dadosGrafico.map((recurso) => recurso.custo);
 
-        graficoCustosServico = new Chart(document.getElementById('grafico-custos-servico'), {
-        type: 'pie',
-        data: {
-            labels: labelsServicos,
-            datasets: [{
-                data: valoresServicos,
-                backgroundColor: labelsServicos.map((_, indice) => cores[indice % cores.length]),
-                borderColor: '#ffffff',
-                borderWidth: 2,
-            }],
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' },
-                tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
+        graficoCustosServico = new Chart(elPizza, {
+            type: 'pie',
+            data: {
+                labels: labelsServicos,
+                datasets: [{
+                    data: valoresServicos,
+                    backgroundColor: labelsServicos.map((_, indice) => cores[indice % cores.length]),
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }],
             },
-        },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: { label: (context) => ` ${formatarUsd(context.raw)}` } },
+                },
+            },
         });
 
-        graficoCustosRecurso = new Chart(document.getElementById('grafico-custos-recurso'), {
-        type: 'bar',
-        data: {
-            labels: labelsRecursos,
-            datasets: [{
-                label: 'Custo mensal',
-                data: custosRecursos,
-                backgroundColor: '#123b9c',
-                borderRadius: 5,
-            }],
-        },
-        options: {
-            maintainAspectRatio: false,
-            indexAxis: 'y',
-            scales: {
-                y: {
-                    ticks: {
-                        autoSkip: false,
-                        callback: (valor) => labelsRecursos[valor]?.length > 32
-                            ? `${labelsRecursos[valor].slice(0, 29)}...`
-                            : labelsRecursos[valor],
-                    },
-                },
-                x: {
-                    beginAtZero: true,
-                    ticks: { callback: (valor) => formatarUsd(valor) },
-                },
+        graficoCustosRecurso = new Chart(elRecurso, {
+            type: 'bar',
+            data: {
+                labels: labelsRecursos,
+                datasets: [{
+                    label: 'Custo mensal',
+                    data: custosRecursos,
+                    backgroundColor: '#123b9c',
+                    borderRadius: 5,
+                }],
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        title: (items) => {
-                            const recurso = dadosGrafico[items[0].dataIndex];
-                            return recurso.quantidade
-                                ? `${recurso.id} (${recurso.quantidade} recursos)`
-                                : recurso.id;
+            options: {
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    y: {
+                        ticks: {
+                            autoSkip: false,
+                            callback: (valor) => labelsRecursos[valor]?.length > 32
+                                ? `${labelsRecursos[valor].slice(0, 29)}...`
+                                : labelsRecursos[valor],
                         },
-                        label: (context) => ` ${formatarUsd(context.raw)}`,
+                    },
+                    x: {
+                        beginAtZero: true,
+                        ticks: { callback: (valor) => formatarUsd(valor) },
+                    },
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => {
+                                const recurso = dadosGrafico[items[0].dataIndex];
+                                return recurso.quantidade
+                                    ? `${recurso.id} (${recurso.quantidade} recursos)`
+                                    : recurso.id;
+                            },
+                            label: (context) => ` ${formatarUsd(context.raw)}`,
+                        },
                     },
                 },
             },
-        },
         });
     } catch (erro) {
         console.error('Não foi possível desenhar os gráficos:', erro);
@@ -241,7 +801,7 @@ function mostrarErroAnalise(mensagem) {
 }
 
 function escaparHtml(texto) {
-    return texto
+    return String(texto ?? '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -297,6 +857,7 @@ function renderizarTabelaPrioridade(acao, prioridade, justificativa) {
 }
 
 function formatarMarkdown(texto) {
+    if (!texto) return '';
     const linhas = texto.split(/\r?\n/);
     const html = [];
     let listaAtual = null;
@@ -425,6 +986,11 @@ function renderizarResultado(dados) {
     }
 
     document.getElementById('resultado-analise').hidden = false;
+
+    const salvoAlerta = document.getElementById('analise-sucesso-salvo');
+    if (salvoAlerta && dados.scanId) {
+        salvoAlerta.hidden = false;
+    }
 }
 
 async function enviarAnalise(event) {
@@ -433,9 +999,11 @@ async function enviarAnalise(event) {
     const input = document.getElementById('arquivo-json');
     const btn = document.getElementById('btn-analisar');
     const carregando = document.getElementById('analise-carregando');
+    const salvoAlerta = document.getElementById('analise-sucesso-salvo');
 
     mostrarErroAnalise('');
     document.getElementById('resultado-analise').hidden = true;
+    if (salvoAlerta) salvoAlerta.hidden = true;
 
     if (!input?.files?.length) {
         mostrarErroAnalise('Selecione um arquivo JSON.');
@@ -451,6 +1019,13 @@ async function enviarAnalise(event) {
         return;
     }
 
+    // Proteção de rotas: se autenticação for obrigatória e o usuário não estiver logado
+    if (authRequired && !currentUser) {
+        mostrarErroAnalise('Acesso restrito: você precisa estar autenticado para enviar inventários.');
+        abrirModalAuth('login');
+        return;
+    }
+
     const formData = new FormData();
     formData.append('file', arquivo);
     const usarIa = document.getElementById('usar-ia')?.checked === true;
@@ -462,6 +1037,11 @@ async function enviarAnalise(event) {
         headers['X-API-Key'] = apiKey;
     }
 
+    const token = await obterTokenAuth();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     btn.disabled = true;
     carregando.hidden = false;
 
@@ -471,6 +1051,12 @@ async function enviarAnalise(event) {
             headers,
             body: formData,
         });
+
+        if (resposta.status === 401) {
+            mostrarErroAnalise('Sessão expirada ou não autenticada. Faça login novamente.');
+            abrirModalAuth('login');
+            return;
+        }
 
         if (!resposta.ok) {
             const texto = await resposta.text();
@@ -484,7 +1070,7 @@ async function enviarAnalise(event) {
         renderizarResultado(dados);
     } catch (erro) {
         console.error(erro);
-        mostrarErroAnalise('Falha de rede. A aplicação está rodando em http://localhost:8080?');
+        mostrarErroAnalise('Falha de rede ao conectar com a aplicação.');
     } finally {
         btn.disabled = false;
         carregando.hidden = true;
@@ -492,6 +1078,8 @@ async function enviarAnalise(event) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    inicializarSupabase();
+
     const form = document.getElementById('form-analise');
     form?.addEventListener('submit', enviarAnalise);
 
@@ -501,6 +1089,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = input.files?.[0];
         if (nomeArquivo) {
             nomeArquivo.textContent = file ? file.name : 'Nenhum arquivo selecionado';
+        }
+    });
+
+    // Fechar modais ao clicar no backdrop escuro
+    document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+        backdrop.addEventListener('click', (event) => {
+            if (event.target === backdrop) {
+                backdrop.hidden = true;
+            }
+        });
+    });
+
+    // Fechar com tecla ESC
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+                backdrop.hidden = true;
+            });
         }
     });
 
